@@ -48,6 +48,7 @@ export default function QuizIntro() {
 
   const [category, setCategory] = useState(null);
   const [wrongQuestions, setWrongQuestions] = useState([]);
+  const [starredCount, setStarredCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(null);
@@ -57,22 +58,25 @@ export default function QuizIntro() {
 
     async function load() {
       try {
-        const [catRes, wrongRes] = await Promise.all([
+        const [catRes, wrongRes, starredRes] = await Promise.all([
           fetch(`/api/categories/${categoryId}`),
           fetch(`/api/categories/${categoryId}/wrong-questions`),
+          fetch(`/api/categories/${categoryId}/starred-questions`),
         ]);
 
         if (!catRes.ok) throw new Error("Category not found");
         if (!wrongRes.ok) throw new Error("Failed to load wrong questions");
 
-        const [catData, wrongData] = await Promise.all([
+        const [catData, wrongData, starredData] = await Promise.all([
           catRes.json(),
           wrongRes.json(),
+          starredRes.ok ? starredRes.json() : null,
         ]);
 
         if (cancelled) return;
         setCategory(catData);
         setWrongQuestions(wrongData);
+        setStarredCount(starredData?.count ?? 0);
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -147,12 +151,20 @@ export default function QuizIntro() {
                     <p className="mt-2 text-ink/55">{category.description}</p>
                   )}
                 </div>
-                <Link
-                  to={`/admin/upload?subject=${category.subject_id}&category=${categoryId}`}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-stone-100 px-4 py-2 text-sm font-semibold text-ink/80 transition hover:bg-ink/10"
-                >
-                  ＋ Add Question
-                </Link>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Link
+                    to={`/admin/questions?subject=${category.subject_id}&category=${categoryId}`}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-stone-100 px-4 py-2 text-sm font-semibold text-ink/80 transition hover:bg-ink/10"
+                  >
+                    Manage Questions
+                  </Link>
+                  <Link
+                    to={`/admin/upload?subject=${category.subject_id}&category=${categoryId}`}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-stone-100 px-4 py-2 text-sm font-semibold text-ink/80 transition hover:bg-ink/10"
+                  >
+                    ＋ Add Question
+                  </Link>
+                </div>
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -239,6 +251,13 @@ export default function QuizIntro() {
                     label="Practice Sessions"
                     color="bg-amber-500"
                   />
+                  <TrendBars
+                    attempts={(category.recent_attempts ?? []).filter(
+                      (a) => a.mode === "starred_only"
+                    )}
+                    label="Starred Reviews"
+                    color="bg-sky-500"
+                  />
                 </div>
               </motion.div>
             )}
@@ -290,6 +309,39 @@ export default function QuizIntro() {
                     <p className="mt-4 text-sm font-semibold text-amber-800">
                       {wrongCount > 0
                         ? starting === "wrong_only"
+                          ? "Starting..."
+                          : "Begin →"
+                        : ""}
+                    </p>
+                  </button>
+                </motion.div>
+
+                <motion.div
+                  whileHover={
+                    starredCount > 0 && starting === null ? { y: -6 } : {}
+                  }
+                  transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                  className="sm:col-span-2"
+                >
+                  <button
+                    onClick={() => startQuiz("starred_only")}
+                    disabled={starredCount === 0 || starting !== null}
+                    className="w-full rounded-2xl border border-ink/10 bg-sky-50 p-6 text-left text-sky-950 shadow-card transition-all hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <p className="text-xl font-semibold">
+                      Review Starred Questions
+                      {starredCount > 0 ? ` (${starredCount})` : ""}
+                    </p>
+                    <p className="mt-1 text-sm text-sky-800/70">
+                      {starredCount > 0
+                        ? starredCount === 1
+                          ? "1 question you starred for review."
+                          : `${starredCount} questions you starred for review.`
+                        : "No starred questions yet. Tap the ☆ on any question to star it for review."}
+                    </p>
+                    <p className="mt-4 text-sm font-semibold text-sky-800">
+                      {starredCount > 0
+                        ? starting === "starred_only"
                           ? "Starting..."
                           : "Begin →"
                         : ""}

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import BackButton from "../components/BackButton";
+import StarIcon from "../components/StarIcon";
 
 function formatTime(startedAt, finishedAt) {
   if (!startedAt || !finishedAt) return null;
@@ -31,6 +32,7 @@ export default function Results() {
 
   const [data, setData] = useState(null);
   const [stats, setStats] = useState({});
+  const [starred, setStarred] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [retaking, setRetaking] = useState(false);
@@ -48,10 +50,16 @@ export default function Results() {
         const body = await res.json();
 
         let statsMap = {};
+        let starredIds = new Set();
         if (body.attempt?.category_id) {
-          const statsRes = await fetch(
-            `/api/categories/${body.attempt.category_id}/question-stats?excludeAttemptId=${attemptId}`
-          ).catch(() => null);
+          const [statsRes, starredRes] = await Promise.all([
+            fetch(
+              `/api/categories/${body.attempt.category_id}/question-stats?excludeAttemptId=${attemptId}`
+            ).catch(() => null),
+            fetch(
+              `/api/categories/${body.attempt.category_id}/starred-questions`
+            ).catch(() => null),
+          ]);
 
           if (statsRes && statsRes.ok) {
             const questionStats = await statsRes.json();
@@ -59,11 +67,19 @@ export default function Results() {
               questionStats.map((s) => [Number(s.question_id), s.wrong_count])
             );
           }
+
+          if (starredRes && starredRes.ok) {
+            const starredData = await starredRes.json();
+            starredIds = new Set(
+              (starredData.starred_questions ?? []).map((s) => s.question_id)
+            );
+          }
         }
 
         if (!cancelled) {
           setData(body);
           setStats(statsMap);
+          setStarred(starredIds);
         }
       } catch (err) {
         if (!cancelled) setError(err.message);
@@ -77,6 +93,36 @@ export default function Results() {
       cancelled = true;
     };
   }, [attemptId]);
+
+  async function toggleStar(questionId) {
+    const wasStarred = starred.has(questionId);
+    setStarred((prev) => {
+      const next = new Set(prev);
+      if (wasStarred) {
+        next.delete(questionId);
+      } else {
+        next.add(questionId);
+      }
+      return next;
+    });
+
+    try {
+      const res = await fetch(`/api/questions/${questionId}/star`, {
+        method: wasStarred ? "DELETE" : "POST",
+      });
+      if (!res.ok) throw new Error("Failed to update star");
+    } catch {
+      setStarred((prev) => {
+        const next = new Set(prev);
+        if (wasStarred) {
+          next.add(questionId);
+        } else {
+          next.delete(questionId);
+        }
+        return next;
+      });
+    }
+  }
 
   async function handleRetake() {
     if (!data?.attempt) return;
@@ -246,15 +292,22 @@ export default function Results() {
                   </p>
                 )}
               </div>
-              <span
-                className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                  ans.is_correct
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-red-100 text-red-600"
-                }`}
-              >
-                {ans.is_correct ? "Correct" : "Wrong"}
-              </span>
+              <div className="flex shrink-0 items-center gap-1">
+                <StarIcon
+                  starred={starred.has(ans.question_id)}
+                  onToggle={() => toggleStar(ans.question_id)}
+                  size={20}
+                />
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                    ans.is_correct
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-red-100 text-red-600"
+                  }`}
+                >
+                  {ans.is_correct ? "Correct" : "Wrong"}
+                </span>
+              </div>
             </div>
 
             {ans.image_url && (

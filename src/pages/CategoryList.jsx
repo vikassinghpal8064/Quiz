@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import CategoryCard from "../components/CategoryCard";
 import AddCategoryModal from "../components/AddCategoryModal";
+import EditCategoryModal from "../components/EditCategoryModal";
+import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import EmptyState from "../components/EmptyState";
 
 export default function CategoryList() {
@@ -13,6 +15,10 @@ export default function CategoryList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editCategory, setEditCategory] = useState(null);
+  const [deleteCategory, setDeleteCategory] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +59,34 @@ export default function CategoryList() {
       { ...created, question_count: 0 },
       ...prev,
     ]);
+  }
+
+  function handleEdited(updated) {
+    setCategories((prev) =>
+      prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c))
+    );
+    setEditCategory(null);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteCategory) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/categories/${deleteCategory.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? "Failed to delete category");
+      }
+      setCategories((prev) => prev.filter((c) => c.id !== deleteCategory.id));
+      setDeleteCategory(null);
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -103,7 +137,12 @@ export default function CategoryList() {
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
-            <CategoryCard key={category.id} category={category} />
+            <CategoryCard
+              key={category.id}
+              category={category}
+              onEdit={setEditCategory}
+              onDelete={setDeleteCategory}
+            />
           ))}
 
           <motion.button
@@ -124,6 +163,36 @@ export default function CategoryList() {
         onCreated={handleCreated}
         subjectId={subjectId}
       />
+      <EditCategoryModal
+        category={editCategory}
+        onClose={() => setEditCategory(null)}
+        onSaved={handleEdited}
+      />
+      <ConfirmDeleteModal
+        open={deleteCategory !== null}
+        title="Delete Category"
+        onClose={() => setDeleteCategory(null)}
+        onConfirm={handleConfirmDelete}
+        busy={deleting}
+        error={deleteError}
+      >
+        <p>
+          You are about to permanently delete{" "}
+          <span className="font-semibold text-ink">{deleteCategory?.name}</span>.
+        </p>
+        <ul className="mt-3 space-y-1 rounded-xl bg-red-50 p-3 text-red-800">
+          <li>
+            <span className="font-semibold">
+              {deleteCategory?.question_count ?? 0}
+            </span>{" "}
+            question{deleteCategory?.question_count === 1 ? "" : "s"}
+          </li>
+        </ul>
+        <p className="mt-3">
+          All quiz attempts, answer history, and starred questions tied to this
+          category will be deleted too. This cannot be undone.
+        </p>
+      </ConfirmDeleteModal>
     </div>
   );
 }

@@ -20,10 +20,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "category_id is required" });
     }
 
-    if (mode !== "full" && mode !== "wrong_only") {
+    if (mode !== "full" && mode !== "wrong_only" && mode !== "starred_only") {
       return res
         .status(400)
-        .json({ error: 'mode must be "full" or "wrong_only"' });
+        .json({ error: 'mode must be "full", "wrong_only" or "starred_only"' });
     }
 
     const catId = Number(category_id);

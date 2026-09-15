@@ -3,18 +3,25 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import BackButton from "../components/BackButton";
+import StarIcon from "../components/StarIcon";
 
 export default function QuizTaking() {
   const { categoryId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const mode = searchParams.get("mode") === "wrong_only" ? "wrong_only" : "full";
+  const mode =
+    searchParams.get("mode") === "wrong_only"
+      ? "wrong_only"
+      : searchParams.get("mode") === "starred_only"
+        ? "starred_only"
+        : "full";
   const attemptId = searchParams.get("attemptId");
 
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [starred, setStarred] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -31,6 +38,20 @@ export default function QuizTaking() {
 
     async function load() {
       try {
+        const starredRes = await fetch(
+          `/api/categories/${categoryId}/starred-questions`
+        ).catch(() => null);
+        let starredData = null;
+        if (starredRes && starredRes.ok) {
+          starredData = await starredRes.json();
+        }
+        let starredIds = new Set();
+        if (starredData) {
+          starredIds = new Set(
+            (starredData.starred_questions ?? []).map((s) => s.question_id)
+          );
+        }
+
         let data;
         if (mode === "wrong_only") {
           const wrongRes = await fetch(
@@ -53,6 +74,31 @@ export default function QuizTaking() {
           data = await res.json();
 
           const orderMap = new Map(wrong.map((w, i) => [w.question_id, i]));
+          data.sort(
+            (a, b) =>
+              (orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+              (orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+          );
+        } else if (mode === "starred_only") {
+          if (!starredIds.size) {
+            if (!cancelled) {
+              setQuestions([]);
+              setLoading(false);
+            }
+            return;
+          }
+
+          const ids = [...starredIds];
+          const res = await fetch(`/api/questions?questionIds=${ids.join(",")}`);
+          if (!res.ok) throw new Error("Failed to load questions");
+          data = await res.json();
+
+          const orderMap = new Map(
+            (starredData?.starred_questions ?? []).map((s, i) => [
+              s.question_id,
+              i,
+            ])
+          );
           data.sort(
             (a, b) =>
               (orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
@@ -99,7 +145,10 @@ export default function QuizTaking() {
           });
         }
 
-        if (!cancelled) setQuestions(data);
+        if (!cancelled) {
+          setStarred(starredIds);
+          setQuestions(data);
+        }
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -138,6 +187,36 @@ export default function QuizTaking() {
       // Keep the local selection; the user can retry by clicking again.
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function toggleStar(questionId) {
+    const wasStarred = starred.has(questionId);
+    setStarred((prev) => {
+      const next = new Set(prev);
+      if (wasStarred) {
+        next.delete(questionId);
+      } else {
+        next.add(questionId);
+      }
+      return next;
+    });
+
+    try {
+      const res = await fetch(`/api/questions/${questionId}/star`, {
+        method: wasStarred ? "DELETE" : "POST",
+      });
+      if (!res.ok) throw new Error("Failed to update star");
+    } catch {
+      setStarred((prev) => {
+        const next = new Set(prev);
+        if (wasStarred) {
+          next.add(questionId);
+        } else {
+          next.delete(questionId);
+        }
+        return next;
+      });
     }
   }
 
@@ -198,6 +277,11 @@ export default function QuizTaking() {
           Practice Mode: Previously Wrong Questions
         </div>
       )}
+      {mode === "starred_only" && (
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-900">
+          Review Mode: Starred Questions
+        </div>
+      )}
 
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm font-medium text-ink/55">
         <span>
@@ -223,9 +307,16 @@ export default function QuizTaking() {
         transition={{ duration: 0.22, ease: "easeOut" }}
         className="rounded-2xl border border-ink/10 bg-white p-6 shadow-card"
       >
-        <h2 className="text-lg font-semibold leading-relaxed text-ink">
-          {current.question_text}
-        </h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-lg font-semibold leading-relaxed text-ink">
+            {current.question_text}
+          </h2>
+          <StarIcon
+            starred={starred.has(current.id)}
+            onToggle={() => toggleStar(current.id)}
+            size={24}
+          />
+        </div>
 
         {current.image_url && (
           <img
@@ -306,11 +397,12 @@ export default function QuizTaking() {
           {questions.map((q, i) => {
             const answered = answers[q.id] != null;
             const isCurrent = i === currentIndex;
+            const isStarred = starred.has(q.id);
             return (
               <button
                 key={q.id}
                 onClick={() => setCurrentIndex(i)}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold transition-colors sm:h-10 sm:w-10 ${
+                className={`relative flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold transition-colors sm:h-10 sm:w-10 ${
                   isCurrent
                     ? "ring-2 ring-emerald-600 ring-offset-2 ring-offset-white"
                     : ""
@@ -321,6 +413,14 @@ export default function QuizTaking() {
                 }`}
               >
                 {i + 1}
+                {isStarred && (
+                  <span
+                    className="absolute -right-1 -top-1 text-[10px] text-amber-500"
+                    aria-hidden="true"
+                  >
+                    ★
+                  </span>
+                )}
               </button>
             );
           })}

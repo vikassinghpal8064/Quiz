@@ -211,6 +211,7 @@ async function resetSchema() {
   const schema = readFileSync(path.join(root, "schema.sql"), "utf8");
   const statements = [
     ...splitSqlStatements(`
+      DROP TABLE IF EXISTS starred_questions CASCADE;
       DROP TABLE IF EXISTS attempt_answers CASCADE;
       DROP TABLE IF EXISTS quiz_attempts CASCADE;
       DROP TABLE IF EXISTS options CASCADE;

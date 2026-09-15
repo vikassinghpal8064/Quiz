@@ -12,9 +12,12 @@ export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const rows = await sql`
-        SELECT s.*, count(c.id)::int AS category_count
+        SELECT s.*,
+          count(DISTINCT c.id)::int AS category_count,
+          count(q.id)::int AS question_count
         FROM subjects s
         LEFT JOIN categories c ON c.subject_id = s.id
+        LEFT JOIN questions q ON q.category_id = c.id
         GROUP BY s.id
         ORDER BY s.created_at DESC
       `;

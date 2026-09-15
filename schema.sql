@@ -35,7 +35,7 @@ CREATE TABLE options (
 CREATE TABLE quiz_attempts (
   id               SERIAL PRIMARY KEY,
   category_id      INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-  mode             TEXT NOT NULL CHECK (mode IN ('full', 'wrong_only')),
+  mode             TEXT NOT NULL CHECK (mode IN ('full', 'wrong_only', 'starred_only')),
   started_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
   finished_at      TIMESTAMPTZ,
   score            INT,
@@ -52,6 +52,16 @@ CREATE TABLE attempt_answers (
 
 CREATE INDEX idx_attempt_answers_attempt_id  ON attempt_answers(attempt_id);
 CREATE INDEX idx_attempt_answers_question_id ON attempt_answers(question_id);
+
+CREATE TABLE starred_questions (
+  id            SERIAL PRIMARY KEY,
+  question_id   INT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  category_id   INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  starred_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(question_id)
+);
+
+CREATE INDEX idx_starred_questions_category_id ON starred_questions(category_id);
 
 -- ============================================================
 -- EXACTLY ONE CORRECT OPTION PER QUESTION

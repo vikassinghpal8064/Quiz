@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import SubjectCard from "../components/SubjectCard";
 import AddSubjectModal from "../components/AddSubjectModal";
+import EditSubjectModal from "../components/EditSubjectModal";
+import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import EmptyState from "../components/EmptyState";
 import BackButton from "../components/BackButton";
 
@@ -11,6 +13,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editSubject, setEditSubject] = useState(null);
+  const [deleteSubject, setDeleteSubject] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,6 +42,34 @@ export default function Dashboard() {
 
   function handleCreated(created) {
     setSubjects((prev) => [created, ...prev]);
+  }
+
+  function handleEdited(updated) {
+    setSubjects((prev) =>
+      prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
+    );
+    setEditSubject(null);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteSubject) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/subjects/${deleteSubject.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? "Failed to delete subject");
+      }
+      setSubjects((prev) => prev.filter((s) => s.id !== deleteSubject.id));
+      setDeleteSubject(null);
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -74,7 +108,12 @@ export default function Dashboard() {
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {subjects.map((subject) => (
-            <SubjectCard key={subject.id} subject={subject} />
+            <SubjectCard
+              key={subject.id}
+              subject={subject}
+              onEdit={setEditSubject}
+              onDelete={setDeleteSubject}
+            />
           ))}
 
           <motion.button
@@ -94,6 +133,43 @@ export default function Dashboard() {
         onClose={() => setModalOpen(false)}
         onCreated={handleCreated}
       />
+      <EditSubjectModal
+        subject={editSubject}
+        onClose={() => setEditSubject(null)}
+        onSaved={handleEdited}
+      />
+      <ConfirmDeleteModal
+        open={deleteSubject !== null}
+        title="Delete Subject"
+        onClose={() => setDeleteSubject(null)}
+        onConfirm={handleConfirmDelete}
+        busy={deleting}
+        error={deleteError}
+      >
+        <p>
+          You are about to permanently delete{" "}
+          <span className="font-semibold text-ink">{deleteSubject?.name}</span>{" "}
+          including everything inside it.
+        </p>
+        <ul className="mt-3 space-y-1 rounded-xl bg-red-50 p-3 text-red-800">
+          <li>
+            <span className="font-semibold">
+              {deleteSubject?.category_count ?? 0}
+            </span>{" "}
+            categor{deleteSubject?.category_count === 1 ? "y" : "ies"}
+          </li>
+          <li>
+            <span className="font-semibold">
+              {deleteSubject?.question_count ?? 0}
+            </span>{" "}
+            question{deleteSubject?.question_count === 1 ? "" : "s"}
+          </li>
+        </ul>
+        <p className="mt-3">
+          All quiz attempts, answer history, and starred questions tied to this
+          subject will be deleted too. This cannot be undone.
+        </p>
+      </ConfirmDeleteModal>
     </div>
   );
 }

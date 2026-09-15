@@ -7,6 +7,7 @@ import QuizIntro from "./pages/QuizIntro";
 import QuizTaking from "./pages/QuizTaking";
 import Results from "./pages/Results";
 import AdminUpload from "./pages/AdminUpload";
+import ManageQuestions from "./pages/ManageQuestions";
 
 export default function App() {
   const location = useLocation();
@@ -60,6 +61,14 @@ export default function App() {
             element={
               <PageTransition>
                 <AdminUpload />
+              </PageTransition>
+            }
+          />
+          <Route
+            path="/admin/questions"
+            element={
+              <PageTransition>
+                <ManageQuestions />
               </PageTransition>
             }
           />
