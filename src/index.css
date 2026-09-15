@@ -1,0 +1,299 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+
+  --color-cream: #f6f5f2;
+  --color-ink: #1d2433;
+
+  --shadow-card:
+    0 1px 2px rgb(29 36 51 / 0.04),
+    0 12px 28px -16px rgb(29 36 51 / 0.16);
+  --shadow-card-hover:
+    0 2px 4px rgb(29 36 51 / 0.05),
+    0 20px 36px -16px rgb(29 36 51 / 0.24);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+/* ============================================================
+   Dark Mode Theme
+   ============================================================ */
+.dark {
+  --color-cream: #0f172a;
+  --color-ink: #e2e8f0;
+
+  --shadow-card:
+    0 1px 2px rgb(0 0 0 / 0.2),
+    0 12px 28px -16px rgb(0 0 0 / 0.55);
+  --shadow-card-hover:
+    0 2px 4px rgb(0 0 0 / 0.25),
+    0 20px 36px -16px rgb(0 0 0 / 0.6);
+}
+
+.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* --- Surfaces & cards --- */
+.dark .bg-white { background-color: #1e293b; }
+.dark .bg-white\/40 { background-color: rgb(30 41 59 / 0.4); }
+.dark .bg-white\/15 { background-color: rgb(30 41 59 / 0.15); }
+
+/* --- Neutral stone tints --- */
+.dark .bg-stone-50 { background-color: #243149; }
+.dark .bg-stone-100 { background-color: #243149; }
+.dark .bg-stone-200 { background-color: #334155; }
+.dark .bg-stone-200\/70 { background-color: rgb(51 65 85 / 0.7); }
+.dark .hover\:bg-stone-100:hover { background-color: #2c3a52; }
+.dark .hover\:bg-stone-200:hover { background-color: #3b4a63; }
+.dark .disabled\:bg-stone-100:disabled { background-color: #243149; }
+
+/* --- Semantic tints (dark-adjusted) --- */
+.dark .bg-emerald-50 { background-color: rgb(6 78 59 / 0.35); }
+.dark .bg-emerald-100 { background-color: rgb(6 78 59 / 0.55); }
+.dark .text-emerald-50 { color: #a7f3d0; }
+.dark .text-emerald-100 { color: #a7f3d0; }
+.dark .text-emerald-700 { color: #34d399; }
+.dark .text-emerald-800 { color: #6ee7b7; }
+.dark .text-emerald-950 { color: #d1fae5; }
+.dark .file\:bg-emerald-50::file-selector-button { background-color: rgb(6 78 59 / 0.35); }
+.dark .hover\:file\:bg-emerald-100:hover::file-selector-button { background-color: rgb(6 78 59 / 0.55); }
+.dark .file\:text-emerald-700::file-selector-button { color: #34d399; }
+
+.dark .bg-red-50 { background-color: rgb(127 29 29 / 0.3); }
+.dark .bg-red-100 { background-color: rgb(127 29 29 / 0.5); }
+.dark .text-red-500 { color: #f87171; }
+.dark .text-red-600 { color: #fca5a5; }
+.dark .text-red-700 { color: #fca5a5; }
+
+.dark .bg-amber-50 { background-color: rgb(120 53 15 / 0.35); }
+.dark .bg-amber-100 { background-color: rgb(120 53 15 / 0.5); }
+.dark .text-amber-700 { color: #fbbf24; }
+.dark .text-amber-800 { color: #fcd34d; }
+.dark .text-amber-900 { color: #fde68a; }
+.dark .text-amber-950 { color: #fef3c7; }
+
+/* --- Modal overlay (keep truly dark) --- */
+.dark .bg-ink\/50 { background-color: rgb(2 6 23 / 0.65); }
+
+/* --- Toast (success uses bg-ink; give it contrast in dark) --- */
+.dark .bg-ink { background-color: #334155; }
+
+/* --- Ring offsets --- */
+.dark .ring-offset-white { --tw-ring-offset-color: #0f172a; }
+
+/* ============================================================
+   Theme Toggle Button
+   ============================================================ */
+#theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid rgb(29 36 51 / 0.1);
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 1px 2px rgb(29 36 51 / 0.05),
+    0 12px 28px -16px rgb(29 36 51 / 0.2);
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+#theme-toggle:hover {
+  border-color: rgb(16 185 129 / 0.5);
+  transform: scale(1.05);
+}
+
+#theme-toggle:active {
+  transform: scale(0.95);
+}
+
+#theme-toggle .icon-sun {
+  display: none;
+}
+
+#theme-toggle .icon-moon {
+  display: inline;
+}
+
+html.dark #theme-toggle {
+  border-color: rgb(226 232 240 / 0.15);
+  background-color: rgb(30 41 59 / 0.9);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 12px 28px -16px rgb(0 0 0 / 0.6);
+}
+
+html.dark #theme-toggle .icon-sun {
+  display: inline;
+}
+
+html.dark #theme-toggle .icon-moon {
+  display: none;
+}
+
+/* ============================================================
+   Responsive: Mobile  (<= 639px)
+   ============================================================ */
+@media (max-width: 639px) {
+  :root {
+    font-size: 15px;
+  }
+
+  [class*="py-12"] {
+    padding-top: 1.75rem;
+    padding-bottom: 1.75rem;
+  }
+
+  h1.font-display.text-4xl,
+  h1.font-display.text-3xl {
+    font-size: 1.75rem;
+    line-height: 1.2;
+  }
+
+  .font-display.text-6xl {
+    font-size: 3rem;
+    line-height: 1.1;
+  }
+
+  /* Cards fill width with a touch more breathing room */
+  .rounded-2xl.border.bg-white.p-6,
+  .rounded-2xl.border.bg-white.p-8,
+  .rounded-2xl.border.bg-white.p-5 {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  /* Keep stat grids from feeling cramped */
+  .grid.grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .grid.grid-cols-3 {
+    gap: 0.5rem;
+  }
+
+  .grid.grid-cols-3 > .rounded-xl {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Mode buttons stack full width */
+  .grid.sm\:grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  /* Question review cards: keep badges readable */
+  .flex.items-start.justify-between {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  /* Toggle button sits clear of content on small screens */
+  #theme-toggle {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.1rem;
+  }
+
+  /* Bottom action bar: stack on narrow screens */
+  .flex.items-center.justify-between:not(.shrink-0) {
+    gap: 0.5rem;
+  }
+
+  /* Question palette buttons stay tappable */
+  .rounded-lg.font-semibold {
+    touch-action: manipulation;
+  }
+
+  /* Admin form rows stack */
+  .flex.items-center.gap-3 {
+    gap: 0.5rem;
+  }
+}
+
+/* ============================================================
+   Responsive: Tablet / iPad  (640px - 1023px)
+   ============================================================ */
+@media (min-width: 640px) and (max-width: 1023px) {
+  :root {
+    font-size: 16px;
+  }
+
+  /* Two-column grids are friendlier on tablet than three */
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Slightly larger touch targets in the question palette */
+  .h-9.w-9 {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  #theme-toggle {
+    top: 1.25rem;
+    right: 1.25rem;
+  }
+}
+
+/* ============================================================
+   Reduced motion & focus accessibility
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+#theme-toggle:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}
