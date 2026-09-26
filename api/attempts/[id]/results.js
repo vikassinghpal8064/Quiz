@@ -1,4 +1,5 @@
 import sql from "../../_lib/db.js";
+import { requireAuth, canAccessAttempt } from "../../_lib/auth.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -8,6 +9,11 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
+
+  // Taking quizzes and starring are things every signed-in user may
+  // do, so this is auth-only, never admin-only.
+  const user = requireAuth(req, res);
+  if (!user) return;
 
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -24,6 +30,9 @@ export default async function handler(req, res) {
     const attempt = await sql`SELECT * FROM quiz_attempts WHERE id = ${attemptId}`;
     if (!attempt.length) {
       return res.status(404).json({ error: "attempt not found" });
+    }
+    if (!canAccessAttempt(attempt[0], user)) {
+      return res.status(403).json({ error: "This attempt belongs to another user" });
     }
 
     const answers = await sql`

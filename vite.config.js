@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import react from "@vitejs/plugin-react";
@@ -24,16 +24,45 @@ const isDir = async (p) => {
   }
 };
 
-async function matchFile(dir, fileParts) {
+// Vercel treats any bracketed path segment as a route parameter, so
+// [id].js, [token].js and friends all work. Sorted so resolution is
+// deterministic if a directory ever holds more than one.
+const DYNAMIC_DIR = /^\[([^\]]+)\]$/;
+const DYNAMIC_FILE = /^\[([^\]]+)\]\.js$/;
+
+const listDynamic = async (dir, pattern) => {
+  const entries = await readdir(dir).catch(() => []);
+  return entries
+    .filter((e) => pattern.test(e))
+    .map((e) => ({ name: pattern.exec(e)[1], entry: e }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+};
+
+// Matches one path segment against the directories inside `dir`, falling
+// back to a dynamic directory such as [id] or [slug].
+async function matchDirSegment(dir, segment) {
+  const literal = path.join(dir, segment);
+  if (await isDir(literal)) return { dir: literal, param: null };
+  for (const d of await listDynamic(dir, DYNAMIC_DIR)) {
+    const p = path.join(dir, d.entry);
+    if (await isDir(p)) return { dir: p, param: { name: d.name, value: segment } };
+  }
+  return null;
+}
+
+// Matches the remaining segments against a handler file inside `dir`.
+async function matchFileSegment(dir, fileParts) {
   if (fileParts.length === 0) {
     const index = path.join(dir, "index.js");
-    return (await isFile(index)) ? index : null;
+    return (await isFile(index)) ? { file: index, param: null } : null;
   }
   const literal = path.join(dir, ...fileParts) + ".js";
-  if (await isFile(literal)) return literal;
+  if (await isFile(literal)) return { file: literal, param: null };
   if (fileParts.length === 1) {
-    const dyn = path.join(dir, "[id].js");
-    if (await isFile(dyn)) return dyn;
+    for (const d of await listDynamic(dir, DYNAMIC_FILE)) {
+      const p = path.join(dir, d.entry);
+      if (await isFile(p)) return { file: p, param: { name: d.name, value: fileParts[0] } };
+    }
   }
   return null;
 }
@@ -44,31 +73,28 @@ async function resolveRoute(segments) {
     const params = {};
     let ok = true;
     for (let i = 0; i < k; i++) {
-      const part = segments[i];
-      const literal = path.join(dir, part);
-      const dynDir = path.join(dir, "[id]");
-      if (await isDir(literal)) {
-        dir = literal;
-      } else if (await isDir(dynDir)) {
-        dir = dynDir;
-        params.id = part;
-      } else {
+      const m = await matchDirSegment(dir, segments[i]);
+      if (!m) {
         ok = false;
         break;
       }
+      dir = m.dir;
+      if (m.param) params[m.param.name] = m.param.value;
     }
     if (!ok) continue;
-    const fileParts = segments.slice(k);
-    const file = await matchFile(dir, fileParts);
-    if (file) {
-      if (path.basename(file) === "[id].js" && fileParts.length === 1) {
-        params.id = fileParts[0];
-      }
-      return { file, params };
+    const fm = await matchFileSegment(dir, segments.slice(k));
+    if (fm) {
+      if (fm.param) params[fm.param.name] = fm.param.value;
+      return { file: fm.file, params };
     }
   }
   return null;
 }
+
+// Exported so scripts/verify_routing.mjs can test the real resolver rather
+// than a copy of it. A regression here silently breaks every API call in
+// local development.
+export { resolveRoute, API_DIR };
 
 function makeRes(res) {
   const respond = (status, payload) => {
@@ -126,12 +152,20 @@ function localServerlessApi() {
           }
 
           const query = Object.fromEntries(url.searchParams.entries());
-          for (const [key, value] of Object.entries(match.params)) query[key] = value;
-          if (query.id !== undefined) query.id = String(query.id);
+          for (const [key, value] of Object.entries(match.params)) query[key] = String(value);
 
           const module = await import(pathToFileURL(match.file).href);
           await module.default(
-            { method: req.method, url: req.url, query, body },
+            {
+              method: req.method,
+              url: req.url,
+              query,
+              body,
+              // Auth reads the session cookie off the request, so the
+              // dev harness has to pass headers through the same way
+              // Vercel does.
+              headers: req.headers,
+            },
             makeRes(res)
           );
         } catch (err) {

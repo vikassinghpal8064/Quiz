@@ -26,34 +26,40 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "category id must be a number" });
     }
 
-    const starred = await sql`
-      SELECT sq.id, sq.question_id, sq.category_id, sq.starred_at
-      FROM starred_questions sq
-      WHERE sq.category_id = ${catId}
-        AND sq.user_id = ${user.id}
-      ORDER BY sq.starred_at DESC, sq.id DESC
+    const category = await sql`SELECT id FROM categories WHERE id = ${catId}`;
+    if (!category.length) {
+      return res.status(404).json({ error: "category not found" });
+    }
+
+    const questions = await sql`
+      SELECT * FROM questions
+      WHERE category_id = ${catId}
+        AND id NOT IN (
+          SELECT aa.question_id
+          FROM attempt_answers aa
+          JOIN quiz_attempts qa ON qa.id = aa.attempt_id
+          WHERE qa.category_id = ${catId}
+            AND qa.user_id = ${user.id}
+        )
+        AND id NOT IN (
+          SELECT sq.question_id
+          FROM starred_questions sq
+          WHERE sq.category_id = ${catId}
+            AND sq.user_id = ${user.id}
+        )
+      ORDER BY id
     `;
 
     const result = {
-      count: starred.length,
-      starred_questions: starred.map((r) => ({
-        id: r.id,
-        question_id: Number(r.question_id),
-        category_id: Number(r.category_id),
-        starred_at: r.starred_at,
-      })),
+      count: questions.length,
+      questions: [],
     };
 
-    if (!starred.length) {
+    if (!questions.length) {
       return res.status(200).json(result);
     }
 
-    const ids = starred.map((r) => r.question_id);
-    const questions = await sql`
-      SELECT * FROM questions
-      WHERE id = ANY(${ids})
-    `;
-
+    const ids = questions.map((q) => q.id);
     const options = await sql`
       SELECT * FROM options
       WHERE question_id = ANY(${ids})
@@ -71,7 +77,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(result);
   } catch (err) {
-    console.error("GET /api/categories/:id/starred-questions", err);
+    console.error("GET /api/categories/:id/new-questions", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 }

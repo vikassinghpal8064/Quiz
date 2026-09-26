@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
+import { useAuth } from "../lib/authContext";
 
 function TrendBars({ attempts, label, color }) {
   if (!attempts.length) {
@@ -45,10 +46,12 @@ function TrendBars({ attempts, label, color }) {
 export default function QuizIntro() {
   const { categoryId } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   const [category, setCategory] = useState(null);
   const [wrongQuestions, setWrongQuestions] = useState([]);
   const [starredCount, setStarredCount] = useState(0);
+  const [newQuestionsCount, setNewQuestionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(null);
@@ -58,25 +61,28 @@ export default function QuizIntro() {
 
     async function load() {
       try {
-        const [catRes, wrongRes, starredRes] = await Promise.all([
+        const [catRes, wrongRes, starredRes, newRes] = await Promise.all([
           fetch(`/api/categories/${categoryId}`),
           fetch(`/api/categories/${categoryId}/wrong-questions`),
           fetch(`/api/categories/${categoryId}/starred-questions`),
+          fetch(`/api/categories/${categoryId}/new-questions`),
         ]);
 
         if (!catRes.ok) throw new Error("Category not found");
         if (!wrongRes.ok) throw new Error("Failed to load wrong questions");
 
-        const [catData, wrongData, starredData] = await Promise.all([
+        const [catData, wrongData, starredData, newData] = await Promise.all([
           catRes.json(),
           wrongRes.json(),
           starredRes.ok ? starredRes.json() : null,
+          newRes.ok ? newRes.json() : null,
         ]);
 
         if (cancelled) return;
         setCategory(catData);
         setWrongQuestions(wrongData);
         setStarredCount(starredData?.count ?? 0);
+        setNewQuestionsCount(newData?.count ?? 0);
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -151,20 +157,22 @@ export default function QuizIntro() {
                     <p className="mt-2 text-ink/55">{category.description}</p>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <Link
-                    to={`/admin/questions?subject=${category.subject_id}&category=${categoryId}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-stone-100 px-4 py-2 text-sm font-semibold text-ink/80 transition hover:bg-ink/10"
-                  >
-                    Manage Questions
-                  </Link>
-                  <Link
-                    to={`/admin/upload?subject=${category.subject_id}&category=${categoryId}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-stone-100 px-4 py-2 text-sm font-semibold text-ink/80 transition hover:bg-ink/10"
-                  >
-                    ＋ Add Question
-                  </Link>
-                </div>
+                {isAdmin && (
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Link
+                      to={`/admin/questions?subject=${category.subject_id}&category=${categoryId}`}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-stone-100 px-4 py-2 text-sm font-semibold text-ink/80 transition hover:bg-ink/10"
+                    >
+                      Manage Questions
+                    </Link>
+                    <Link
+                      to={`/admin/upload?subject=${category.subject_id}&category=${categoryId}`}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-stone-100 px-4 py-2 text-sm font-semibold text-ink/80 transition hover:bg-ink/10"
+                    >
+                      ＋ Add Question
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -213,16 +221,19 @@ export default function QuizIntro() {
                       No questions in this category yet
                     </p>
                     <p className="mt-1 text-amber-800/70">
-                      Add one below, or upload several at once from the bulk CSV
-                      tab.
+                      {isAdmin
+                        ? "Add one below, or upload several at once from the bulk CSV tab."
+                        : "Nothing to practise here yet. Please check back later."}
                     </p>
                   </div>
-                  <Link
-                    to={`/admin/upload?subject=${category.subject_id}&category=${categoryId}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700"
-                  >
-                    ＋ Add Question
-                  </Link>
+                  {isAdmin && (
+                    <Link
+                      to={`/admin/upload?subject=${category.subject_id}&category=${categoryId}`}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700"
+                    >
+                      ＋ Add Question
+                    </Link>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -257,6 +268,13 @@ export default function QuizIntro() {
                     )}
                     label="Starred Reviews"
                     color="bg-sky-500"
+                  />
+                  <TrendBars
+                    attempts={(category.recent_attempts ?? []).filter(
+                      (a) => a.mode === "new_only"
+                    )}
+                    label="New Question Runs"
+                    color="bg-violet-500"
                   />
                 </div>
               </motion.div>
@@ -342,6 +360,39 @@ export default function QuizIntro() {
                     <p className="mt-4 text-sm font-semibold text-sky-800">
                       {starredCount > 0
                         ? starting === "starred_only"
+                          ? "Starting..."
+                          : "Begin →"
+                        : ""}
+                    </p>
+                  </button>
+                </motion.div>
+
+                <motion.div
+                  whileHover={
+                    newQuestionsCount > 0 && starting === null ? { y: -6 } : {}
+                  }
+                  transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                  className="sm:col-span-2"
+                >
+                  <button
+                    onClick={() => startQuiz("new_only")}
+                    disabled={newQuestionsCount === 0 || starting !== null}
+                    className="w-full rounded-2xl border border-ink/10 bg-violet-50 p-6 text-left text-violet-950 shadow-card transition-all hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <p className="text-xl font-semibold">
+                      New Questions
+                      {newQuestionsCount > 0 ? ` (${newQuestionsCount})` : ""}
+                    </p>
+                    <p className="mt-1 text-sm text-violet-800/70">
+                      {newQuestionsCount > 0
+                        ? `${newQuestionsCount} question${
+                            newQuestionsCount === 1 ? "" : "s"
+                          } you have never attempted and never starred.`
+                        : "No unseen questions left — you have attempted or starred every question in this category."}
+                    </p>
+                    <p className="mt-4 text-sm font-semibold text-violet-800">
+                      {newQuestionsCount > 0
+                        ? starting === "new_only"
                           ? "Starting..."
                           : "Begin →"
                         : ""}

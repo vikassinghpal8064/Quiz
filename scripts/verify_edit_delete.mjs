@@ -1,6 +1,3 @@
-import { createRequire } from "node:module";
-const require = createRequire(import.meta.url);
-
 process.loadEnvFile(".env");
 
 const h = (p) => import(p).then((m) => m.default);
@@ -20,6 +17,20 @@ const [subjectsHandler, subjectByIdHandler, categoriesHandler, categoryByIdHandl
   h("../api/attempts/[id]/answers.js"),
   h("../api/categories/[id]/wrong-questions.js"),
 ]);
+
+// Every endpoint requires a session now. Loaded dynamically so the API
+// modules see DATABASE_URL / JWT_SECRET from .env.
+const { createTestAccount } = await import("./_auth_fixture.mjs");
+
+// This suite exercises admin-only create/edit/delete plus starring and
+// taking a quiz, so it runs as an admin account.
+let account = null;
+let cookie = null;
+
+async function requestHeaders() {
+  if (!cookie) throw new Error("no session cookie: call createTestAccount() first");
+  return { cookie };
+}
 
 function makeRes() {
   const r = {
@@ -41,7 +52,7 @@ function makeRes() {
 
 async function call(handler, method, query, body) {
   const res = makeRes();
-  await handler({ method, query, body, url: "" }, res);
+  await handler({ method, query, body, url: "", headers: await requestHeaders() }, res);
   if (res.statusCode >= 400) throw new Error(`HTTP ${res.statusCode}: ${JSON.stringify(res.body)}`);
   return res.body;
 }
@@ -55,6 +66,11 @@ function check(label, cond) {
 let subjectId, categoryId, questionId, attemptId;
 
 try {
+  console.log("Creating test account...");
+  account = await createTestAccount({ role: "admin", label: "editdel" });
+  cookie = account.cookie;
+  console.log(`  logged in as ${account.username} (${account.role})`);
+
   console.log("Creating scratch subject/category/question...");
   const sub = await call(subjectsHandler, "POST", {}, { name: "ZZ_Cleanup_Test", description: "temp" });
   subjectId = sub.id;
@@ -148,9 +164,21 @@ try {
   console.error(err.stack);
 } finally {
   if (subjectId) {
-    try { await call(subjectByIdHandler, "DELETE", { id: subjectId }, {}); console.log(" (cleanup: deleted scratch subject)"); }
-    catch (e) { console.error("cleanup failed:", e.message); }
+    try {
+      await call(subjectByIdHandler, "DELETE", { id: subjectId }, {});
+      console.log(" (cleanup: deleted scratch subject)");
+    } catch (e) {
+      // The main flow already deletes the subject, so a 404 here just means
+      // there was nothing left to clean up.
+      if (/404/.test(e.message)) console.log(" (cleanup: scratch subject already deleted by the test flow)");
+      else console.error("scratch subject cleanup failed:", e.message);
+    }
+  }
+  if (account) {
+    try { await account.cleanup(); console.log(" (cleanup: deleted test account)"); }
+    catch (e) { console.error("account cleanup failed:", e.message); }
   }
   console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
-  process.exit(fail ? 1 : 0);
+  if (fail) process.exit(1);
+  process.exit(0);
 }

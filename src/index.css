@@ -167,6 +167,55 @@ html.dark #theme-toggle .icon-moon {
 }
 
 /* ============================================================
+   Account Sidebar Toggle
+   Mirrors #theme-toggle's geometry so the two buttons always
+   sit side by side in the top-right corner.
+   ============================================================ */
+#account-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 4.25rem; /* 1rem offset + 2.75rem button + 0.5rem gap */
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid rgb(29 36 51 / 0.1);
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 1px 2px rgb(29 36 51 / 0.05),
+    0 12px 28px -16px rgb(29 36 51 / 0.2);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+  color: rgb(29 36 51 / 0.75);
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+#account-toggle:hover {
+  border-color: rgb(16 185 129 / 0.5);
+  transform: scale(1.05);
+}
+
+#account-toggle:active {
+  transform: scale(0.95);
+}
+
+html.dark #account-toggle {
+  border-color: rgb(226 232 240 / 0.15);
+  background-color: rgb(30 41 59 / 0.9);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 12px 28px -16px rgb(0 0 0 / 0.6);
+  color: rgb(226 232 240 / 0.8);
+}
+
+/* ============================================================
    Responsive: Mobile  (<= 639px)
    ============================================================ */
 @media (max-width: 639px) {
@@ -233,6 +282,14 @@ html.dark #theme-toggle .icon-moon {
     font-size: 1.1rem;
   }
 
+  #account-toggle {
+    top: 0.75rem;
+    right: 3.75rem; /* 0.75rem offset + 2.5rem button + 0.5rem gap */
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.85rem;
+  }
+
   /* Bottom action bar: stack on narrow screens */
   .flex.items-center.justify-between:not(.shrink-0) {
     gap: 0.5rem;
@@ -271,6 +328,11 @@ html.dark #theme-toggle .icon-moon {
   #theme-toggle {
     top: 1.25rem;
     right: 1.25rem;
+  }
+
+  #account-toggle {
+    top: 1.25rem;
+    right: 4.5rem; /* 1.25rem offset + 2.75rem button + 0.5rem gap */
   }
 }
 

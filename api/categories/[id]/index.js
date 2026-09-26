@@ -1,4 +1,5 @@
 import sql from "../../_lib/db.js";
+import { requireAccess } from "../../_lib/auth.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -8,6 +9,10 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
+
+  // Reads: any signed-in user. Writes (POST/PATCH/PUT/DELETE): admin only.
+  const user = requireAccess(req, res);
+  if (!user) return;
 
   try {
     const { id } = req.query;
@@ -92,18 +97,24 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "category not found" });
     }
 
+    // Attempt history is private: scope these to the caller so one
+    // user can never see another user's scores, modes or timings.
     const stats = await sql`
       SELECT
         count(*)::int AS attempt_count,
         max(score)::int AS best_score
       FROM quiz_attempts
-      WHERE category_id = ${catId} AND finished_at IS NOT NULL
+      WHERE category_id = ${catId}
+        AND finished_at IS NOT NULL
+        AND user_id = ${user.id}
     `;
 
     const recentAttempts = await sql`
       SELECT id, mode, score, total_questions, finished_at
       FROM quiz_attempts
-      WHERE category_id = ${catId} AND finished_at IS NOT NULL
+      WHERE category_id = ${catId}
+        AND finished_at IS NOT NULL
+        AND user_id = ${user.id}
       ORDER BY finished_at DESC
       LIMIT 10
     `;

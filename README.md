@@ -58,6 +58,41 @@ DATABASE_URL="postgresql://user:password@ep-xxxxx.region.aws.neon.tech/dbname?ss
 > `.env` is git-ignored, so the connection string is never committed. Only
 > `.env.example` (with a placeholder) is tracked.
 
+### Auth and password-reset variables
+
+Accounts are required for everything except the login, register and
+password-reset pages. Add these to `.env` (and to your Vercel project
+settings) as well:
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `JWT_SECRET` | yes | Signs the 7-day session cookie. At least 32 characters. Generate with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`. Changing it logs everyone out. |
+| `APP_URL` | yes | Public origin used to build reset links, e.g. `https://your-app.vercel.app`. No trailing slash. |
+| `RESEND_API_KEY` | for real emails | Resend API key (`re_…`) from <https://resend.com/api-keys>. |
+| `RESEND_FROM_EMAIL` | for real emails | Verified sender. `onboarding@resend.dev` works only for your own Resend account address; anything else needs a verified domain. |
+
+If `RESEND_API_KEY` is unset the app still runs: "forgot password" writes the
+reset link to the server console instead of sending mail. The API always replies
+with the same generic message so it never reveals whether an address is
+registered.
+
+### Making someone an admin
+
+Registration always creates a `role = 'user'` account; there is deliberately no
+public way to become an admin. Promote yourself once:
+
+```sql
+UPDATE users SET role = 'admin' WHERE username = 'your-username';
+```
+
+Then log out and back in so the new role is picked up.
+
+### About email addresses
+
+`username` and `phone_number` are unique, and username uniqueness is
+case-insensitive. `email` is **not** unique, so a whole class or family can
+share one address.
+
 ### On Vercel
 
 Add `DATABASE_URL` as an environment variable for the project:
@@ -73,6 +108,10 @@ Add `DATABASE_URL` as an environment variable for the project:
 
   Paste the connection string when prompted, pick which environments
   (Production, Preview, Development), and confirm.
+
+Add `JWT_SECRET`, `APP_URL`, `RESEND_API_KEY` and `RESEND_FROM_EMAIL` the same
+way. `JWT_SECRET` and `APP_URL` are required for the app to work at all; the two
+Resend values are only needed to actually send reset emails.
 
 ## 3. Run locally
 
@@ -126,10 +165,32 @@ and the app is live.
 
 ```
 api/            # Vercel serverless functions (subjects, categories, questions, attempts, results, ...)
-schema.sql      # Postgres schema: subjects, categories, questions, options, quiz_attempts, attempt_answers
-src/pages/      # Dashboard, CategoryList, QuizIntro, QuizTaking, Results, AdminUpload
-src/components/ # Cards, modals, toasts, page transitions, loading skeletons, empty states
-src/lib/        # CSV parser
+  _lib/auth.js  # JWT issue/verify, session cookie, requireAuth / requireAdmin
+  _lib/email.js # Resend client
+  auth/         # register, login, logout, me, forgot-password, reset-password
+migrations/     # Ordered SQL migrations; run with `node scripts/migrate.mjs`
+schema.sql      # Canonical schema: users, password_reset_tokens, subjects,
+                # categories, questions, options, quiz_attempts, attempt_answers,
+                # starred_questions
+shared/         # Validation rules shared by the API and the React forms
+src/pages/      # Dashboard, CategoryList, QuizIntro, QuizTaking, Results, AdminUpload,
+                # Login, Register, ForgotPassword, ResetPassword
+src/components/ # Cards, modals, toasts, page transitions, auth provider and route guards
+src/lib/        # CSV parser, auth context, auth form styles
+scripts/        # Verification suites (see below)
+```
+
+## Verification suites
+
+Each script talks to the real database and cleans up everything it creates, so
+they can be run any time. They `exit(1)` on the first failure.
+
+```bash
+node scripts/verify_auth.mjs      # accounts, roles, per-user isolation, reset flow
+node scripts/verify_routing.mjs   # dev-server API router resolves every /api route
+node scripts/verify_schema.mjs    # schema.sql executes and matches the live DB
+node scripts/verify_new_only.mjs  # the "new only" quiz mode
+node scripts/verify_edit_delete.mjs
 ```
 
 ## CSV upload format

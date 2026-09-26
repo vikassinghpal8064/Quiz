@@ -15,7 +15,9 @@ export default function QuizTaking() {
       ? "wrong_only"
       : searchParams.get("mode") === "starred_only"
         ? "starred_only"
-        : "full";
+        : searchParams.get("mode") === "new_only"
+          ? "new_only"
+          : "full";
   const attemptId = searchParams.get("attemptId");
 
   const [questions, setQuestions] = useState([]);
@@ -104,6 +106,22 @@ export default function QuizTaking() {
               (orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
               (orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER)
           );
+        } else if (mode === "new_only") {
+          const newRes = await fetch(
+            `/api/categories/${categoryId}/new-questions`
+          );
+          if (!newRes.ok) throw new Error("Failed to load new questions");
+          const fresh = await newRes.json();
+
+          data = fresh.questions ?? [];
+
+          if (!data.length) {
+            if (!cancelled) {
+              setQuestions([]);
+              setLoading(false);
+            }
+            return;
+          }
         } else {
           const [res, statsRes] = await Promise.all([
             fetch(`/api/questions?categoryId=${categoryId}`),
@@ -280,6 +298,11 @@ export default function QuizTaking() {
       {mode === "starred_only" && (
         <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-900">
           Review Mode: Starred Questions
+        </div>
+      )}
+      {mode === "new_only" && (
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-violet-100 px-4 py-1.5 text-sm font-semibold text-violet-900">
+          New Questions Mode
         </div>
       )}
 

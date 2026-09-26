@@ -1,4 +1,5 @@
 import sql from "./_lib/db.js";
+import { requireAuth } from "./_lib/auth.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -8,6 +9,11 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
+
+  // Taking quizzes and starring are things every signed-in user may
+  // do, so this is auth-only, never admin-only.
+  const user = requireAuth(req, res);
+  if (!user) return;
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -20,10 +26,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "category_id is required" });
     }
 
-    if (mode !== "full" && mode !== "wrong_only" && mode !== "starred_only") {
+    if (mode !== "full" && mode !== "wrong_only" && mode !== "starred_only" && mode !== "new_only") {
       return res
         .status(400)
-        .json({ error: 'mode must be "full", "wrong_only" or "starred_only"' });
+        .json({ error: 'mode must be "full", "wrong_only", "starred_only" or "new_only"' });
     }
 
     const catId = Number(category_id);
@@ -32,8 +38,8 @@ export default async function handler(req, res) {
     }
 
     const rows = await sql`
-      INSERT INTO quiz_attempts (category_id, mode)
-      VALUES (${catId}, ${mode})
+      INSERT INTO quiz_attempts (category_id, mode, user_id)
+      VALUES (${catId}, ${mode}, ${user.id})
       RETURNING *
     `;
 

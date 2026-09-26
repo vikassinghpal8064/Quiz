@@ -1,4 +1,5 @@
 import sql from "../_lib/db.js";
+import { requireAccess } from "../_lib/auth.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -8,6 +9,10 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
+
+  // Reads: any signed-in user. Writes (POST/PATCH/PUT/DELETE): admin only.
+  const user = requireAccess(req, res);
+  if (!user) return;
 
   try {
     const { id } = req.query;

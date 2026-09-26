@@ -7,9 +7,11 @@ import AddCategoryModal from "../components/AddCategoryModal";
 import EditCategoryModal from "../components/EditCategoryModal";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import EmptyState from "../components/EmptyState";
+import { useAuth } from "../lib/authContext";
 
 export default function CategoryList() {
   const { subjectId } = useParams();
+  const { isAdmin } = useAuth();
   const [subject, setSubject] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -125,14 +127,20 @@ export default function CategoryList() {
         <EmptyState
           icon="🗂️"
           title="No categories yet"
-          description="Add your first category to this subject to start adding questions."
+          description={
+            isAdmin
+              ? "Add your first category to this subject to start adding questions."
+              : "There are no categories to practise here yet. Please check back later."
+          }
         >
-          <button
-            onClick={() => setModalOpen(true)}
-            className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-          >
-            Add Category
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setModalOpen(true)}
+              className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              Add Category
+            </button>
+          )}
         </EmptyState>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -140,34 +148,40 @@ export default function CategoryList() {
             <CategoryCard
               key={category.id}
               category={category}
-              onEdit={setEditCategory}
-              onDelete={setDeleteCategory}
+              onEdit={isAdmin ? setEditCategory : undefined}
+              onDelete={isAdmin ? setDeleteCategory : undefined}
             />
           ))}
 
-          <motion.button
-            whileHover={{ y: -6 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            onClick={() => setModalOpen(true)}
-            className="flex h-44 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink/20 bg-white/40 text-ink/45 transition-colors hover:border-emerald-500 hover:text-emerald-600"
-          >
-            <span className="text-3xl">＋</span>
-            <span className="mt-2 text-sm font-medium">Add Category</span>
-          </motion.button>
+          {isAdmin && (
+            <motion.button
+              whileHover={{ y: -6 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              onClick={() => setModalOpen(true)}
+              className="flex h-44 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink/20 bg-white/40 text-ink/45 transition-colors hover:border-emerald-500 hover:text-emerald-600"
+            >
+              <span className="text-3xl">＋</span>
+              <span className="mt-2 text-sm font-medium">Add Category</span>
+            </motion.button>
+          )}
         </div>
       )}
 
-      <AddCategoryModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={handleCreated}
-        subjectId={subjectId}
-      />
-      <EditCategoryModal
-        category={editCategory}
-        onClose={() => setEditCategory(null)}
-        onSaved={handleEdited}
-      />
+      {isAdmin && (
+        <>
+          <AddCategoryModal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            onCreated={handleCreated}
+            subjectId={subjectId}
+          />
+          <EditCategoryModal
+            category={editCategory}
+            onClose={() => setEditCategory(null)}
+            onSaved={handleEdited}
+          />
+        </>
+      )}
       <ConfirmDeleteModal
         open={deleteCategory !== null}
         title="Delete Category"

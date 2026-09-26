@@ -1,4 +1,5 @@
 import sql from "../../_lib/db.js";
+import { requireAccess } from "../../_lib/auth.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -8,6 +9,10 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
+
+  // Reads: any signed-in user. Writes (POST/PATCH/PUT/DELETE): admin only.
+  const user = requireAccess(req, res);
+  if (!user) return;
 
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -30,6 +35,10 @@ export default async function handler(req, res) {
         FROM attempt_answers aa
         JOIN questions q ON q.id = aa.question_id
         WHERE q.category_id = ${catId}
+          AND aa.attempt_id IN (
+            SELECT id FROM quiz_attempts
+            WHERE category_id = ${catId} AND user_id = ${user.id}
+          )
         ORDER BY aa.question_id, aa.attempt_id, aa.id DESC
       )
       SELECT

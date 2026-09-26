@@ -7,8 +7,10 @@ import EditSubjectModal from "../components/EditSubjectModal";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import EmptyState from "../components/EmptyState";
 import BackButton from "../components/BackButton";
+import { useAuth } from "../lib/authContext";
 
 export default function Dashboard() {
+  const { isAdmin } = useAuth();
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -96,14 +98,20 @@ export default function Dashboard() {
         <EmptyState
           icon="📚"
           title="No subjects yet"
-          description="Create your first subject to start adding categories and questions."
+          description={
+            isAdmin
+              ? "Create your first subject to start adding categories and questions."
+              : "There are no subjects to practise yet. Please check back later."
+          }
         >
-          <button
-            onClick={() => setModalOpen(true)}
-            className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-          >
-            Add Subject
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setModalOpen(true)}
+              className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              Add Subject
+            </button>
+          )}
         </EmptyState>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -111,33 +119,39 @@ export default function Dashboard() {
             <SubjectCard
               key={subject.id}
               subject={subject}
-              onEdit={setEditSubject}
-              onDelete={setDeleteSubject}
+              onEdit={isAdmin ? setEditSubject : undefined}
+              onDelete={isAdmin ? setDeleteSubject : undefined}
             />
           ))}
 
-          <motion.button
-            whileHover={{ y: -6 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            onClick={() => setModalOpen(true)}
-            className="flex h-44 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink/20 bg-white/40 text-ink/45 transition-colors hover:border-emerald-500 hover:text-emerald-600"
-          >
-            <span className="text-3xl">＋</span>
-            <span className="mt-2 text-sm font-medium">Add Subject</span>
-          </motion.button>
+          {isAdmin && (
+            <motion.button
+              whileHover={{ y: -6 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              onClick={() => setModalOpen(true)}
+              className="flex h-44 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink/20 bg-white/40 text-ink/45 transition-colors hover:border-emerald-500 hover:text-emerald-600"
+            >
+              <span className="text-3xl">＋</span>
+              <span className="mt-2 text-sm font-medium">Add Subject</span>
+            </motion.button>
+          )}
         </div>
       )}
 
-      <AddSubjectModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={handleCreated}
-      />
-      <EditSubjectModal
-        subject={editSubject}
-        onClose={() => setEditSubject(null)}
-        onSaved={handleEdited}
-      />
+      {isAdmin && (
+        <>
+          <AddSubjectModal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            onCreated={handleCreated}
+          />
+          <EditSubjectModal
+            subject={editSubject}
+            onClose={() => setEditSubject(null)}
+            onSaved={handleEdited}
+          />
+        </>
+      )}
       <ConfirmDeleteModal
         open={deleteSubject !== null}
         title="Delete Subject"

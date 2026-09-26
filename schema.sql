@@ -32,15 +32,69 @@ CREATE TABLE options (
   is_correct  BOOLEAN NOT NULL DEFAULT false
 );
 
+-- ============================================================
+-- ACCOUNTS
+-- ============================================================
+-- Created before quiz_attempts / starred_questions because both
+-- reference it.
+
+CREATE TABLE users (
+  id            SERIAL PRIMARY KEY,
+  username      TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  -- Intentionally NOT unique: a whole class or family can share one
+  -- address. That also means registration cannot be used to probe
+  -- whether an email is registered.
+  email         TEXT NOT NULL,
+  phone_number  TEXT NOT NULL UNIQUE,
+  role          TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_users_email ON users(email);
+
+-- Looked up case-insensitively on login and on forgot-password. The
+-- username index also enforces case-insensitive username uniqueness in
+-- the database, so a concurrent pair of registrations cannot slip
+-- "Alice" and "alice" past the application-level pre-check.
+CREATE UNIQUE INDEX idx_users_username_lower ON users(lower(username));
+CREATE INDEX        idx_users_email_lower    ON users(lower(email));
+
+-- Password reset tokens. One row per request; only the newest unused,
+-- unexpired row is redeemable. Tokens are random 32-byte hex strings.
+CREATE TABLE password_reset_tokens (
+  id         SERIAL PRIMARY KEY,
+  user_id    INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token      TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used       BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_password_reset_tokens_user_id    ON password_reset_tokens(user_id);
+CREATE INDEX idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
+
+-- ============================================================
+-- QUIZ ACTIVITY
+-- ============================================================
+-- user_id is NULLABLE on purpose: it is NULL for every row that predates
+-- accounts. The app always writes the current user's id, and reads are
+-- strictly scoped by user_id, so those ownerless legacy rows are simply
+-- never attributed to anybody. ON DELETE SET NULL means deleting an
+-- account orphans its history instead of destroying it.
+
 CREATE TABLE quiz_attempts (
   id               SERIAL PRIMARY KEY,
+  user_id          INT REFERENCES users(id) ON DELETE SET NULL,
   category_id      INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-  mode             TEXT NOT NULL CHECK (mode IN ('full', 'wrong_only', 'starred_only')),
+  mode             TEXT NOT NULL CHECK (mode IN ('full', 'wrong_only', 'starred_only', 'new_only')),
   started_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
   finished_at      TIMESTAMPTZ,
   score            INT,
   total_questions  INT
 );
+
+CREATE INDEX idx_quiz_attempts_user_id ON quiz_attempts(user_id);
 
 CREATE TABLE attempt_answers (
   id                  SERIAL PRIMARY KEY,
@@ -53,14 +107,18 @@ CREATE TABLE attempt_answers (
 CREATE INDEX idx_attempt_answers_attempt_id  ON attempt_answers(attempt_id);
 CREATE INDEX idx_attempt_answers_question_id ON attempt_answers(question_id);
 
+-- A star is per (question, user), so any number of users can star the
+-- same question independently. See the note above on NULL user_id.
 CREATE TABLE starred_questions (
   id            SERIAL PRIMARY KEY,
+  user_id       INT REFERENCES users(id) ON DELETE SET NULL,
   question_id   INT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
   category_id   INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
   starred_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(question_id)
+  UNIQUE(question_id, user_id)
 );
 
+CREATE INDEX idx_starred_questions_user_id     ON starred_questions(user_id);
 CREATE INDEX idx_starred_questions_category_id ON starred_questions(category_id);
 
 -- ============================================================

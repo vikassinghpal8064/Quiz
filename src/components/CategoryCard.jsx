@@ -27,26 +27,34 @@ export default function CategoryCard({ category, onEdit, onDelete }) {
           </p>
         </Link>
 
-        <div className="pointer-events-none absolute right-3 top-3 flex gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-          <button
-            type="button"
-            onClick={() => onEdit?.(category)}
-            title="Edit category"
-            aria-label={`Edit ${category.name}`}
-            className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-sm shadow-sm transition-colors hover:bg-emerald-50 hover:text-emerald-700"
-          >
-            ✏️
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete?.(category)}
-            title="Delete category"
-            aria-label={`Delete ${category.name}`}
-            className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-sm shadow-sm transition-colors hover:bg-red-50 hover:text-red-700"
-          >
-            🗑️
-          </button>
-        </div>
+        {/* Only rendered when the parent supplies handlers, i.e. for
+            admins. Regular users must not see these at all. */}
+        {(onEdit || onDelete) && (
+          <div className="pointer-events-none absolute right-3 top-3 flex gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+            {onEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(category)}
+                title="Edit category"
+                aria-label={`Edit ${category.name}`}
+                className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-sm shadow-sm transition-colors hover:bg-emerald-50 hover:text-emerald-700"
+              >
+                ✏️
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(category)}
+                title="Delete category"
+                aria-label={`Delete ${category.name}`}
+                className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-sm shadow-sm transition-colors hover:bg-red-50 hover:text-red-700"
+              >
+                🗑️
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
