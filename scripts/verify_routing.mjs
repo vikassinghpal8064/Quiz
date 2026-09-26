@@ -175,6 +175,59 @@ for (const route of ROUTES) {
     `expected one of ${candidates.join(" or ")}`);
 }
 
+// Calls the one deployed function the way Vercel calls it.
+//
+// This exists because of a bug that only Vercel could produce: with the
+// handlers dispatched from api/[...path].js, every request worked locally and
+// single-segment paths worked in production, but /api/auth/login and every
+// other nested path returned a platform 404 - the catch-all never matched
+// them. The unit-style table checks above all passed while the deployed app
+// was completely broken, so this suite exercises the real entry point too.
+console.log("\nDEPLOYED ENTRY (api/index.js, reached via the /api/(.*) rewrite)");
+const { default: dispatch } = await import("../api/index.js");
+
+function makeRes() {
+  const r = { statusCode: 0, body: null };
+  r.setHeader = () => {};
+  r.status = (code) => ({ json: (p) => { r.statusCode = code; r.body = p; }, end: () => { r.statusCode = code; } });
+  r.json = (p) => { r.statusCode = 200; r.body = p; };
+  r.end = () => {};
+  return r;
+}
+
+// `path` is what the vercel.json rewrite puts in the query string; `url` is the
+// fallback the function uses when it is called directly.
+async function callEntry(path, { viaQueryString = true } = {}) {
+  const res = makeRes();
+  const req = {
+    method: "GET",
+    url: viaQueryString ? "/api/index?path=/api/" + path : "/api/" + path,
+    query: viaQueryString ? { path: "/api/" + path } : {},
+    body: null,
+    headers: {},
+  };
+  await dispatch(req, res);
+  return `${res.statusCode} ${JSON.stringify(res.body)}`;
+}
+
+// Every response must come from a handler, which means JSON with a message
+// this app defines. A platform 404 or a fall-through to the SPA cannot appear
+// here; 401 proves the route resolved and the handler ran its auth guard.
+const NESTED = [
+  ["auth/me", '401 {"error":"Authentication required"}'],
+  ["subjects/3", '401 {"error":"Authentication required"}'],
+  ["attempts/12/answers", '401 {"error":"Authentication required"}'],
+  ["categories/5/wrong-questions", '401 {"error":"Authentication required"}'],
+  ["questions/9/star", '401 {"error":"Authentication required"}'],
+  ["auth/reset-password/deadbeef", '405 {"error":"Method not allowed"}'],
+];
+for (const [path, expected] of NESTED) {
+  check(`rewrite: /api/${path}`, await callEntry(path), expected);
+  check(`direct:  /api/${path}`, await callEntry(path, { viaQueryString: false }), expected);
+}
+check("unknown nested path 404s from the router", await callEntry("nope/deep/deeper"), '404 {"error":"Not found"}');
+check("handlers are not routable directly", await callEntry("_auth/login"), '404 {"error":"Not found"}');
+
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 if (failures.length) console.log("FAILED:\n  - " + failures.join("\n  - "));
 process.exit(fail ? 1 : 0);

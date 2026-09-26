@@ -166,8 +166,9 @@ and the app is live.
 
 ```
 api/                # Vercel serverless functions
-  [...path].js      # Catch-all: the only file Vercel turns into a function
-  _lib/router.js    # Maps a request path to a handler; used in dev and prod
+  index.js          # The single function; vercel.json rewrites /api/* here
+  _lib/dispatch.js  # Picks the handler for a request path
+  _lib/router.js    # The path -> handler table used by dispatch
   _lib/auth.js      # JWT issue/verify, session cookie, requireAuth / requireAdmin
   _lib/email.js     # Resend client
   _auth/            # register, login, logout, me, forgot-password, reset-password
@@ -187,25 +188,41 @@ src/lib/        # CSV parser, auth context, auth form styles
 scripts/        # Verification suites (see below)
 ```
 
-### Why the handlers live in underscore directories
+### Why the API is a single function
 
-Vercel builds one serverless function per `.js` file directly under `api/`, and
-the Hobby plan allows at most **12 functions per deployment**. This app has 21
-endpoints, so a file per endpoint fails to build with *"No more than 12
-Serverless Functions can be added to a Deployment on the Hobby plan"*.
+Two Vercel constraints force this shape.
 
-Vercel ignores files and folders whose name starts with `_`, so every handler
-sits in `api/_auth/`, `api/_categories/` and so on, and the single catch-all
-`api/[...path].js` forwards each request to the handler that
-`api/_lib/router.js` selects. One function, no limit to hit. The same table
-drives the dev server, so local and deployed routing cannot drift.
+**The function count.** Vercel builds one serverless function per `.js` file
+directly under `api/`, and the Hobby plan allows at most **12 per
+deployment**. This app has 21 endpoints, so a file per endpoint fails to
+build with *"No more than 12 Serverless Functions can be added to a
+Deployment on the Hobby plan"*. Vercel ignores files and folders whose name
+starts with `_`, so every handler sits in `api/_auth/`, `api/_categories/`
+and so on, and `api/index.js` serves all of them.
+
+**Catch-all routes do not work here.** The obvious way to keep one function is
+`api/[...path].js`, but a catch-all in `api/` only matches single-segment
+paths. `/api/foo` reaches the function, while `/api/auth/login`,
+`/api/subjects/3` and every other nested path are answered by the platform
+with a 404 *before the function runs* — so the deployed app returns 404 for
+every real endpoint while local development works fine. Instead `vercel.json`
+rewrites the whole subtree to the one function:
+
+```json
+{ "source": "/api/(.*)", "destination": "/api/index?path=/api/$1" }
+```
+
+The original path arrives in `req.query.path`; `api/_lib/dispatch.js` routes
+it through `api/_lib/router.js` and calls the handler. The same `dispatch()`
+runs from the dev server, so local and deployed routing cannot drift.
 
 **Adding an endpoint:** put the handler in the matching `_`-prefixed folder
 (`[id].js` for a captured id, `index.js` for a collection) and add a row to
 `api/_lib/router.js`, e.g. `{ path: "/questions/:id/star", handler: star }`.
 Do not create a new file directly under `api/` — each one is another function.
-`node scripts/verify_routing.mjs` fails if a handler is not wired up, or if the
-function count ever climbs back over 12.
+`node scripts/verify_routing.mjs` fails if a handler is not wired up, if the
+function count climbs back over 12, or if the deployed entry point stops
+resolving nested paths.
 
 ## Verification suites
 
@@ -214,7 +231,7 @@ they can be run any time. They `exit(1)` on the first failure.
 
 ```bash
 node scripts/verify_auth.mjs      # accounts, roles, per-user isolation, reset flow
-node scripts/verify_routing.mjs   # every /api route resolves; function count under Vercel's limit
+node scripts/verify_routing.mjs   # every /api route resolves, deployed entry included; function count under Vercel's limit
 node scripts/verify_schema.mjs    # schema.sql executes and matches the live DB
 node scripts/verify_new_only.mjs  # the "new only" quiz mode
 node scripts/verify_edit_delete.mjs

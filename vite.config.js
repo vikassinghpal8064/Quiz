@@ -6,15 +6,15 @@ import { defineConfig } from "vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Resolved to an absolute URL on purpose. Vercel bundles this config into a
+// Resolved to an absolute URL on purpose. Vite bundles this config into a
 // temp file before running it, so a relative specifier would be resolved
 // against the wrong directory, and a literal specifier would be inlined by
 // the bundler - which would import every handler (and therefore read
 // DATABASE_URL) while the config is still loading, before .env has been read
 // below. A computed specifier stays a real runtime import.
-const ROUTER_URL = new URL("./api/_lib/router.js", import.meta.url).href;
-let router;
-const loadRouter = () => (router ??= import(ROUTER_URL));
+const DISPATCH_URL = new URL("./api/_lib/dispatch.js", import.meta.url).href;
+let dispatch;
+const loadDispatch = () => (dispatch ??= import(DISPATCH_URL));
 
 function makeRes(res) {
   const respond = (status, payload) => {
@@ -52,15 +52,7 @@ function localServerlessApi() {
           const url = new URL(req.url, "http://localhost");
           if (!url.pathname.startsWith("/api/")) return next();
 
-          const { resolveRoute } = await loadRouter();
-          const segments = url.pathname.split("/").filter(Boolean).slice(1);
-          const match = resolveRoute(segments);
-          if (!match) {
-            res.statusCode = 404;
-            res.setHeader("Content-Type", "application/json");
-            return res.end(JSON.stringify({ error: "Not found" }), "utf8");
-          }
-
+          const { default: dispatch } = await loadDispatch();
           const chunks = [];
           for await (const chunk of req) chunks.push(chunk);
           let body = null;
@@ -72,15 +64,11 @@ function localServerlessApi() {
             }
           }
 
-          // Same query shape the deployed catch-all builds, so a handler that
-          // works here works there.
-          const query = { ...Object.fromEntries(url.searchParams.entries()), ...match.params };
-
-          await match.handler(
+          await dispatch(
             {
               method: req.method,
               url: req.url,
-              query,
+              query: Object.fromEntries(url.searchParams.entries()),
               body,
               // Auth reads the session cookie off the request, so the
               // dev harness has to pass headers through the same way
