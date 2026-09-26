@@ -8,8 +8,8 @@
 // Load this with a DYNAMIC import only, after process.loadEnvFile(".env"),
 // because the API modules read process.env at import time.
 import { neon } from "@neondatabase/serverless";
-import registerHandler from "../api/auth/register.js";
-import loginHandler from "../api/auth/login.js";
+import registerHandler from "../api/_auth/register.js";
+import loginHandler from "../api/_auth/login.js";
 
 const sql = neon(process.env.DATABASE_URL);
 

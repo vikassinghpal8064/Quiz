@@ -5,17 +5,17 @@ const h = (p) => import(p).then((m) => m.default);
 const [subjectsHandler, subjectByIdHandler, categoriesHandler, categoryByIdHandler,
   questionsHandler, questionByIdHandler, starHandler, starredQuestionsHandler,
   attemptsHandler, answersHandler, wrongQuestionsHandler] = await Promise.all([
-  h("../api/subjects.js"),
-  h("../api/subjects/[id].js"),
-  h("../api/categories.js"),
-  h("../api/categories/[id]/index.js"),
-  h("../api/questions.js"),
-  h("../api/questions/[id]/index.js"),
-  h("../api/questions/[id]/star.js"),
-  h("../api/categories/[id]/starred-questions.js"),
-  h("../api/attempts.js"),
-  h("../api/attempts/[id]/answers.js"),
-  h("../api/categories/[id]/wrong-questions.js"),
+  h("../api/_subjects/index.js"),
+  h("../api/_subjects/[id].js"),
+  h("../api/_categories/index.js"),
+  h("../api/_categories/[id]/index.js"),
+  h("../api/_questions/index.js"),
+  h("../api/_questions/[id]/index.js"),
+  h("../api/_questions/[id]/star.js"),
+  h("../api/_categories/[id]/starred-questions.js"),
+  h("../api/_attempts/index.js"),
+  h("../api/_attempts/[id]/answers.js"),
+  h("../api/_categories/[id]/wrong-questions.js"),
 ]);
 
 // Every endpoint requires a session now. Loaded dynamically so the API

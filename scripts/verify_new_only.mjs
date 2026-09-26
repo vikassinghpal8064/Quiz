@@ -6,17 +6,17 @@ const [subjectsHandler, categoriesHandler, questionsHandler,
   attemptsHandler, answersHandler, finishHandler,
   newQuestionsHandler, wrongQuestionsHandler, starredQuestionsHandler,
   questionStatsHandler, starHandler] = await Promise.all([
-  h("../api/subjects.js"),
-  h("../api/categories.js"),
-  h("../api/questions.js"),
-  h("../api/attempts.js"),
-  h("../api/attempts/[id]/answers.js"),
-  h("../api/attempts/[id]/finish.js"),
-  h("../api/categories/[id]/new-questions.js"),
-  h("../api/categories/[id]/wrong-questions.js"),
-  h("../api/categories/[id]/starred-questions.js"),
-  h("../api/categories/[id]/question-stats.js"),
-  h("../api/questions/[id]/star.js"),
+  h("../api/_subjects/index.js"),
+  h("../api/_categories/index.js"),
+  h("../api/_questions/index.js"),
+  h("../api/_attempts/index.js"),
+  h("../api/_attempts/[id]/answers.js"),
+  h("../api/_attempts/[id]/finish.js"),
+  h("../api/_categories/[id]/new-questions.js"),
+  h("../api/_categories/[id]/wrong-questions.js"),
+  h("../api/_categories/[id]/starred-questions.js"),
+  h("../api/_categories/[id]/question-stats.js"),
+  h("../api/_questions/[id]/star.js"),
 ]);
 
 // Every endpoint requires a session now. Loaded dynamically so the API
@@ -307,7 +307,7 @@ try {
 } finally {
   if (subjectId) {
     try {
-      const del = await h("../api/subjects/[id].js");
+      const del = await h("../api/_subjects/[id].js");
       await call(del, "DELETE", { id: subjectId }, {});
       console.log(`\n(cleanup: deleted scratch subject ${subjectId})`);
     } catch (e) { console.error("scratch subject cleanup failed:", e.message); }

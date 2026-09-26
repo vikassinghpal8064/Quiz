@@ -123,7 +123,8 @@ npm run dev
 Open the printed URL (default `http://localhost:5173`).
 
 The dev server also runs the `/api/*` serverless functions locally (via a small
-built-in middleware that mimics Vercel), so `npm run dev` is all you need — no
+built-in middleware that dispatches through the same `api/_lib/router.js` table
+the deployment uses), so `npm run dev` is all you need — no
 separate API process. Point the app at a real `DATABASE_URL` (step 2) and the
 pages will load real data.
 
@@ -164,10 +165,16 @@ and the app is live.
 ## Project structure
 
 ```
-api/            # Vercel serverless functions (subjects, categories, questions, attempts, results, ...)
-  _lib/auth.js  # JWT issue/verify, session cookie, requireAuth / requireAdmin
-  _lib/email.js # Resend client
-  auth/         # register, login, logout, me, forgot-password, reset-password
+api/                # Vercel serverless functions
+  [...path].js      # Catch-all: the only file Vercel turns into a function
+  _lib/router.js    # Maps a request path to a handler; used in dev and prod
+  _lib/auth.js      # JWT issue/verify, session cookie, requireAuth / requireAdmin
+  _lib/email.js     # Resend client
+  _auth/            # register, login, logout, me, forgot-password, reset-password
+  _categories/      # categories, plus per-category question lists
+  _questions/       # questions, plus star/unstar
+  _subjects/        # subjects
+  _attempts/        # attempts, answers, finish, results
 migrations/     # Ordered SQL migrations; run with `node scripts/migrate.mjs`
 schema.sql      # Canonical schema: users, password_reset_tokens, subjects,
                 # categories, questions, options, quiz_attempts, attempt_answers,
@@ -180,6 +187,26 @@ src/lib/        # CSV parser, auth context, auth form styles
 scripts/        # Verification suites (see below)
 ```
 
+### Why the handlers live in underscore directories
+
+Vercel builds one serverless function per `.js` file directly under `api/`, and
+the Hobby plan allows at most **12 functions per deployment**. This app has 21
+endpoints, so a file per endpoint fails to build with *"No more than 12
+Serverless Functions can be added to a Deployment on the Hobby plan"*.
+
+Vercel ignores files and folders whose name starts with `_`, so every handler
+sits in `api/_auth/`, `api/_categories/` and so on, and the single catch-all
+`api/[...path].js` forwards each request to the handler that
+`api/_lib/router.js` selects. One function, no limit to hit. The same table
+drives the dev server, so local and deployed routing cannot drift.
+
+**Adding an endpoint:** put the handler in the matching `_`-prefixed folder
+(`[id].js` for a captured id, `index.js` for a collection) and add a row to
+`api/_lib/router.js`, e.g. `{ path: "/questions/:id/star", handler: star }`.
+Do not create a new file directly under `api/` — each one is another function.
+`node scripts/verify_routing.mjs` fails if a handler is not wired up, or if the
+function count ever climbs back over 12.
+
 ## Verification suites
 
 Each script talks to the real database and cleans up everything it creates, so
@@ -187,7 +214,7 @@ they can be run any time. They `exit(1)` on the first failure.
 
 ```bash
 node scripts/verify_auth.mjs      # accounts, roles, per-user isolation, reset flow
-node scripts/verify_routing.mjs   # dev-server API router resolves every /api route
+node scripts/verify_routing.mjs   # every /api route resolves; function count under Vercel's limit
 node scripts/verify_schema.mjs    # schema.sql executes and matches the live DB
 node scripts/verify_new_only.mjs  # the "new only" quiz mode
 node scripts/verify_edit_delete.mjs

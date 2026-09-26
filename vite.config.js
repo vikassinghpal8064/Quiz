@@ -1,100 +1,20 @@
-import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const API_DIR = path.join(__dirname, "api");
 
-const isFile = async (p) => {
-  try {
-    return (await stat(p)).isFile();
-  } catch {
-    return false;
-  }
-};
-
-const isDir = async (p) => {
-  try {
-    return (await stat(p)).isDirectory();
-  } catch {
-    return false;
-  }
-};
-
-// Vercel treats any bracketed path segment as a route parameter, so
-// [id].js, [token].js and friends all work. Sorted so resolution is
-// deterministic if a directory ever holds more than one.
-const DYNAMIC_DIR = /^\[([^\]]+)\]$/;
-const DYNAMIC_FILE = /^\[([^\]]+)\]\.js$/;
-
-const listDynamic = async (dir, pattern) => {
-  const entries = await readdir(dir).catch(() => []);
-  return entries
-    .filter((e) => pattern.test(e))
-    .map((e) => ({ name: pattern.exec(e)[1], entry: e }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-};
-
-// Matches one path segment against the directories inside `dir`, falling
-// back to a dynamic directory such as [id] or [slug].
-async function matchDirSegment(dir, segment) {
-  const literal = path.join(dir, segment);
-  if (await isDir(literal)) return { dir: literal, param: null };
-  for (const d of await listDynamic(dir, DYNAMIC_DIR)) {
-    const p = path.join(dir, d.entry);
-    if (await isDir(p)) return { dir: p, param: { name: d.name, value: segment } };
-  }
-  return null;
-}
-
-// Matches the remaining segments against a handler file inside `dir`.
-async function matchFileSegment(dir, fileParts) {
-  if (fileParts.length === 0) {
-    const index = path.join(dir, "index.js");
-    return (await isFile(index)) ? { file: index, param: null } : null;
-  }
-  const literal = path.join(dir, ...fileParts) + ".js";
-  if (await isFile(literal)) return { file: literal, param: null };
-  if (fileParts.length === 1) {
-    for (const d of await listDynamic(dir, DYNAMIC_FILE)) {
-      const p = path.join(dir, d.entry);
-      if (await isFile(p)) return { file: p, param: { name: d.name, value: fileParts[0] } };
-    }
-  }
-  return null;
-}
-
-async function resolveRoute(segments) {
-  for (let k = segments.length; k >= 0; k--) {
-    let dir = API_DIR;
-    const params = {};
-    let ok = true;
-    for (let i = 0; i < k; i++) {
-      const m = await matchDirSegment(dir, segments[i]);
-      if (!m) {
-        ok = false;
-        break;
-      }
-      dir = m.dir;
-      if (m.param) params[m.param.name] = m.param.value;
-    }
-    if (!ok) continue;
-    const fm = await matchFileSegment(dir, segments.slice(k));
-    if (fm) {
-      if (fm.param) params[fm.param.name] = fm.param.value;
-      return { file: fm.file, params };
-    }
-  }
-  return null;
-}
-
-// Exported so scripts/verify_routing.mjs can test the real resolver rather
-// than a copy of it. A regression here silently breaks every API call in
-// local development.
-export { resolveRoute, API_DIR };
+// Resolved to an absolute URL on purpose. Vercel bundles this config into a
+// temp file before running it, so a relative specifier would be resolved
+// against the wrong directory, and a literal specifier would be inlined by
+// the bundler - which would import every handler (and therefore read
+// DATABASE_URL) while the config is still loading, before .env has been read
+// below. A computed specifier stays a real runtime import.
+const ROUTER_URL = new URL("./api/_lib/router.js", import.meta.url).href;
+let router;
+const loadRouter = () => (router ??= import(ROUTER_URL));
 
 function makeRes(res) {
   const respond = (status, payload) => {
@@ -132,8 +52,9 @@ function localServerlessApi() {
           const url = new URL(req.url, "http://localhost");
           if (!url.pathname.startsWith("/api/")) return next();
 
+          const { resolveRoute } = await loadRouter();
           const segments = url.pathname.split("/").filter(Boolean).slice(1);
-          const match = await resolveRoute(segments);
+          const match = resolveRoute(segments);
           if (!match) {
             res.statusCode = 404;
             res.setHeader("Content-Type", "application/json");
@@ -151,11 +72,11 @@ function localServerlessApi() {
             }
           }
 
-          const query = Object.fromEntries(url.searchParams.entries());
-          for (const [key, value] of Object.entries(match.params)) query[key] = String(value);
+          // Same query shape the deployed catch-all builds, so a handler that
+          // works here works there.
+          const query = { ...Object.fromEntries(url.searchParams.entries()), ...match.params };
 
-          const module = await import(pathToFileURL(match.file).href);
-          await module.default(
+          await match.handler(
             {
               method: req.method,
               url: req.url,
