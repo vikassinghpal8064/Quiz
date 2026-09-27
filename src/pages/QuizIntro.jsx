@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
+import QuizTimerModal from "../components/QuizTimerModal";
 import { useAuth } from "../lib/authContext";
 
 function TrendBars({ attempts, label, color }) {
@@ -55,6 +56,7 @@ export default function QuizIntro() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(null);
+  const [timerForMode, setTimerForMode] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,7 +98,7 @@ export default function QuizIntro() {
     };
   }, [categoryId]);
 
-  async function startQuiz(mode) {
+  async function startQuiz(mode, timerSeconds) {
     setStarting(mode);
     try {
       const res = await fetch("/api/attempts", {
@@ -114,11 +116,22 @@ export default function QuizIntro() {
       }
 
       const attempt = await res.json();
-      navigate(`/quiz/${categoryId}?attemptId=${attempt.id}&mode=${mode}`);
+      const timerQuery = timerSeconds ? `&timer=${timerSeconds}` : "";
+      navigate(
+        `/quiz/${categoryId}?attemptId=${attempt.id}&mode=${mode}${timerQuery}`
+      );
     } catch (err) {
       setError(err.message);
       setStarting(null);
     }
+  }
+
+  // Every mode goes through the timer prompt first; a null duration
+  // means the quiz runs untimed, exactly as it did before.
+  function handleTimerStart(timerSeconds) {
+    const mode = timerForMode;
+    setTimerForMode(null);
+    startQuiz(mode, timerSeconds);
   }
 
   const wrongCount = wrongQuestions.length;
@@ -289,7 +302,7 @@ export default function QuizIntro() {
                 <motion.button
                   whileHover={{ y: -6 }}
                   transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                  onClick={() => startQuiz("full")}
+                  onClick={() => setTimerForMode("full")}
                   disabled={starting !== null || category.question_count === 0}
                   className="rounded-2xl border border-ink/10 bg-emerald-600 p-6 text-left text-white shadow-card transition-all hover:bg-emerald-700 hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -311,7 +324,7 @@ export default function QuizIntro() {
                   transition={{ type: "spring", stiffness: 260, damping: 20 }}
                 >
                   <button
-                    onClick={() => startQuiz("wrong_only")}
+                    onClick={() => setTimerForMode("wrong_only")}
                     disabled={wrongCount === 0 || starting !== null}
                     className="h-full w-full rounded-2xl border border-ink/10 bg-amber-50 p-6 text-left text-amber-950 shadow-card transition-all hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -342,7 +355,7 @@ export default function QuizIntro() {
                   className="sm:col-span-2"
                 >
                   <button
-                    onClick={() => startQuiz("starred_only")}
+                    onClick={() => setTimerForMode("starred_only")}
                     disabled={starredCount === 0 || starting !== null}
                     className="w-full rounded-2xl border border-ink/10 bg-sky-50 p-6 text-left text-sky-950 shadow-card transition-all hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -375,7 +388,7 @@ export default function QuizIntro() {
                   className="sm:col-span-2"
                 >
                   <button
-                    onClick={() => startQuiz("new_only")}
+                    onClick={() => setTimerForMode("new_only")}
                     disabled={newQuestionsCount === 0 || starting !== null}
                     className="w-full rounded-2xl border border-ink/10 bg-violet-50 p-6 text-left text-violet-950 shadow-card transition-all hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -404,6 +417,12 @@ export default function QuizIntro() {
           </>
         )
       )}
+
+      <QuizTimerModal
+        open={timerForMode !== null}
+        onClose={() => setTimerForMode(null)}
+        onStart={handleTimerStart}
+      />
     </div>
   );
 }

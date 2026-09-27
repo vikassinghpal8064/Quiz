@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import BackButton from "../components/BackButton";
 import StarIcon from "../components/StarIcon";
+import QuizTimerModal from "../components/QuizTimerModal";
 
 function formatTime(startedAt, finishedAt) {
   if (!startedAt || !finishedAt) return null;
@@ -36,6 +37,7 @@ export default function Results() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [retaking, setRetaking] = useState(false);
+  const [retakeTimerOpen, setRetakeTimerOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,7 +126,7 @@ export default function Results() {
     }
   }
 
-  async function handleRetake() {
+  async function handleRetake(timerSeconds) {
     if (!data?.attempt) return;
     setRetaking(true);
     try {
@@ -138,13 +140,20 @@ export default function Results() {
       });
       if (!res.ok) throw new Error("Failed to start new attempt");
       const attempt = await res.json();
+      const timerQuery = timerSeconds ? `&timer=${timerSeconds}` : "";
       navigate(
-        `/quiz/${data.attempt.category_id}?attemptId=${attempt.id}&mode=${data.attempt.mode}`
+        `/quiz/${data.attempt.category_id}?attemptId=${attempt.id}&mode=${data.attempt.mode}${timerQuery}`
       );
     } catch (err) {
       setError(err.message);
       setRetaking(false);
     }
+  }
+
+  // Same optional timer as the mode buttons on the category page.
+  function handleRetakeTimerStart(timerSeconds) {
+    setRetakeTimerOpen(false);
+    handleRetake(timerSeconds);
   }
 
   if (loading) {
@@ -251,7 +260,7 @@ export default function Results() {
       <div className="mt-8 flex items-center justify-between gap-3">
         <h2 className="text-xl font-semibold text-ink">Question Review</h2>
         <button
-          onClick={handleRetake}
+          onClick={() => setRetakeTimerOpen(true)}
           disabled={retaking}
           className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
         >
@@ -353,13 +362,19 @@ export default function Results() {
 
       <div className="mt-10 text-center">
         <button
-          onClick={handleRetake}
+          onClick={() => setRetakeTimerOpen(true)}
           disabled={retaking}
           className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
         >
           {retaking ? "Starting…" : "Retake This Test"}
         </button>
       </div>
+
+      <QuizTimerModal
+        open={retakeTimerOpen}
+        onClose={() => setRetakeTimerOpen(false)}
+        onStart={handleRetakeTimerStart}
+      />
     </div>
   );
 }

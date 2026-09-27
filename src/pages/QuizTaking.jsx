@@ -1,9 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import BackButton from "../components/BackButton";
 import StarIcon from "../components/StarIcon";
+
+function formatTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
 
 export default function QuizTaking() {
   const { categoryId } = useParams();
@@ -20,6 +26,13 @@ export default function QuizTaking() {
           : "full";
   const attemptId = searchParams.get("attemptId");
 
+  // Optional countdown, set from the timer prompt before the attempt
+  // started. Absent or non-positive means the quiz runs untimed.
+  const timerTotal = (() => {
+    const raw = Number(searchParams.get("timer"));
+    return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
+  })();
+
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -28,6 +41,11 @@ export default function QuizTaking() {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(timerTotal);
+  // Refs, not state: the countdown tick and a manual click can land in
+  // the same tick, and the guard has to be synchronous.
+  const submittedRef = useRef(false);
+  const submitTestRef = useRef(null);
 
   useEffect(() => {
     if (!attemptId) {
@@ -240,6 +258,10 @@ export default function QuizTaking() {
 
   async function submitTest() {
     if (!attemptId) return;
+    // The countdown and the Submit button can fire at the same moment;
+    // the ref makes the first caller win so the attempt is only finished once.
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     setSubmitting(true);
     try {
       const res = await fetch(`/api/attempts/${attemptId}/finish`, {
@@ -255,6 +277,32 @@ export default function QuizTaking() {
       setSubmitting(false);
     }
   }
+
+  // Point the countdown at the current submitTest without making the
+  // interval depend on it.
+  useEffect(() => {
+    submitTestRef.current = submitTest;
+  });
+
+  useEffect(() => {
+    if (!timerTotal || submitting || loading || !questions.length) return;
+
+    // Count down from a wall-clock deadline so a throttled or delayed
+    // tick cannot make the clock drift.
+    const deadline = Date.now() + timerTotal * 1000;
+
+    const id = window.setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setTimeLeft(remaining);
+
+      if (remaining === 0) {
+        window.clearInterval(id);
+        submitTestRef.current?.();
+      }
+    }, 1000);
+
+    return () => window.clearInterval(id);
+  }, [timerTotal, submitting, loading, questions.length]);
 
   if (loading) {
     return (
@@ -322,6 +370,20 @@ export default function QuizTaking() {
           transition={{ duration: 0.4, ease: "easeOut" }}
         />
       </div>
+
+      {timerTotal > 0 && (
+        <div className="mb-4 flex justify-end">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold tabular-nums ${
+              timeLeft <= 60
+                ? "bg-red-50 text-red-700"
+                : "bg-ink/5 text-ink/70"
+            }`}
+          >
+            Time left {formatTime(timeLeft)}
+          </span>
+        </div>
+      )}
 
       <motion.div
         key={current.id}
