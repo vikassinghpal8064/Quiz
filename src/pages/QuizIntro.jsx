@@ -189,24 +189,24 @@ export default function QuizIntro() {
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <div className="rounded-xl bg-stone-100 p-4 text-center">
-                  <p className="text-3xl font-semibold text-ink">
+                <div className="rounded-2xl bg-stone-100 p-4 text-center">
+                  <p className="stat-num text-4xl text-ink">
                     {category.question_count}
                   </p>
-                  <p className="text-xs font-medium uppercase tracking-wide text-ink/45">
+                  <p className="label-caps mt-2">
                     Questions
                   </p>
                 </div>
-                <div className="rounded-xl bg-stone-100 p-4 text-center">
-                  <p className="text-3xl font-semibold text-ink">
+                <div className="rounded-2xl bg-stone-100 p-4 text-center">
+                  <p className="stat-num text-4xl text-ink">
                     {category.attempt_count}
                   </p>
-                  <p className="text-xs font-medium uppercase tracking-wide text-ink/45">
+                  <p className="label-caps mt-2">
                     Attempts
                   </p>
                 </div>
-                <div className="col-span-2 rounded-xl bg-stone-100 p-4 text-center sm:col-span-1">
-                  <p className="text-3xl font-semibold text-emerald-600">
+                <div className="col-span-2 rounded-2xl bg-stone-100 p-4 text-center sm:col-span-1">
+                  <p className="stat-num text-4xl text-correct">
                     {category.best_score ?? "—"}
                     {category.best_score != null && (
                       <span className="text-lg text-ink/35">
@@ -215,7 +215,7 @@ export default function QuizIntro() {
                       </span>
                     )}
                   </p>
-                  <p className="text-xs font-medium uppercase tracking-wide text-ink/45">
+                  <p className="label-caps mt-2">
                     Best Score
                   </p>
                 </div>
@@ -304,15 +304,15 @@ export default function QuizIntro() {
                   transition={{ type: "spring", stiffness: 260, damping: 20 }}
                   onClick={() => setTimerForMode("full")}
                   disabled={starting !== null || category.question_count === 0}
-                  className="rounded-2xl border border-ink/10 bg-emerald-600 p-6 text-left text-white shadow-card transition-all hover:bg-emerald-700 hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  className="accent-card accent-lavender rounded-2xl border p-6 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <p className="text-xl font-semibold">Start Full Test</p>
-                  <p className="mt-1 text-sm text-emerald-100">
+                  <p className="mt-1 text-sm text-ink/80">
                     {category.question_count === 0
                       ? "Add questions first to start."
                       : `All ${category.question_count} questions in this category.`}
                   </p>
-                  <p className="mt-4 text-sm font-semibold text-emerald-50">
+                  <p className="mt-4 text-sm font-semibold text-ink">
                     {starting === "full" ? "Starting..." : "Begin →"}
                   </p>
                 </motion.button>
@@ -326,18 +326,18 @@ export default function QuizIntro() {
                   <button
                     onClick={() => setTimerForMode("wrong_only")}
                     disabled={wrongCount === 0 || starting !== null}
-                    className="h-full w-full rounded-2xl border border-ink/10 bg-amber-50 p-6 text-left text-amber-950 shadow-card transition-all hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
+                    className="accent-card accent-butter h-full w-full rounded-2xl border p-6 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <p className="text-xl font-semibold">
                       Practice Only Wrong Questions
                       {wrongCount > 0 ? ` (${wrongCount})` : ""}
                     </p>
-                    <p className="mt-1 text-sm text-amber-800/70">
+                    <p className="mt-1 text-sm text-ink/80">
                       {wrongCount > 0
                         ? `${wrongCount} question${wrongCount === 1 ? "" : "s"} you missed before.`
                         : "No wrong answers yet on this category."}
                     </p>
-                    <p className="mt-4 text-sm font-semibold text-amber-800">
+                    <p className="mt-4 text-sm font-semibold text-ink">
                       {wrongCount > 0
                         ? starting === "wrong_only"
                           ? "Starting..."
@@ -357,20 +357,20 @@ export default function QuizIntro() {
                   <button
                     onClick={() => setTimerForMode("starred_only")}
                     disabled={starredCount === 0 || starting !== null}
-                    className="w-full rounded-2xl border border-ink/10 bg-sky-50 p-6 text-left text-sky-950 shadow-card transition-all hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
+                    className="accent-card accent-sage w-full rounded-2xl border p-6 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <p className="text-xl font-semibold">
                       Review Starred Questions
                       {starredCount > 0 ? ` (${starredCount})` : ""}
                     </p>
-                    <p className="mt-1 text-sm text-sky-800/70">
+                    <p className="mt-1 text-sm text-ink/80">
                       {starredCount > 0
                         ? starredCount === 1
                           ? "1 question you starred for review."
                           : `${starredCount} questions you starred for review.`
                         : "No starred questions yet. Tap the ☆ on any question to star it for review."}
                     </p>
-                    <p className="mt-4 text-sm font-semibold text-sky-800">
+                    <p className="mt-4 text-sm font-semibold text-ink">
                       {starredCount > 0
                         ? starting === "starred_only"
                           ? "Starting..."
@@ -390,20 +390,20 @@ export default function QuizIntro() {
                   <button
                     onClick={() => setTimerForMode("new_only")}
                     disabled={newQuestionsCount === 0 || starting !== null}
-                    className="w-full rounded-2xl border border-ink/10 bg-violet-50 p-6 text-left text-violet-950 shadow-card transition-all hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
+                    className="accent-card accent-pink w-full rounded-2xl border p-6 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <p className="text-xl font-semibold">
                       New Questions
                       {newQuestionsCount > 0 ? ` (${newQuestionsCount})` : ""}
                     </p>
-                    <p className="mt-1 text-sm text-violet-800/70">
+                    <p className="mt-1 text-sm text-ink/80">
                       {newQuestionsCount > 0
                         ? `${newQuestionsCount} question${
                             newQuestionsCount === 1 ? "" : "s"
                           } you have never attempted and never starred.`
                         : "No unseen questions left — you have attempted or starred every question in this category."}
                     </p>
-                    <p className="mt-4 text-sm font-semibold text-violet-800">
+                    <p className="mt-4 text-sm font-semibold text-ink">
                       {newQuestionsCount > 0
                         ? starting === "new_only"
                           ? "Starting..."

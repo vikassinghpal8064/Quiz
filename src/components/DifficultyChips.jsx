@@ -1,18 +1,11 @@
 import { DIFFICULTIES } from "../lib/questionMeta";
 
+// Active/inactive colouring is driven by the `.diff` classes + aria-pressed
+// in the stylesheet, so the markup only has to say which level it is.
 const STYLES = {
-  easy: {
-    on: "border-emerald-500 bg-emerald-50 text-emerald-800",
-    off: "border-ink/10 bg-white text-ink/55 hover:border-emerald-300 hover:text-emerald-700",
-  },
-  medium: {
-    on: "border-amber-500 bg-amber-50 text-amber-900",
-    off: "border-ink/10 bg-white text-ink/55 hover:border-amber-300 hover:text-amber-700",
-  },
-  hard: {
-    on: "border-red-500 bg-red-50 text-red-700",
-    off: "border-ink/10 bg-white text-ink/55 hover:border-red-300 hover:text-red-600",
-  },
+  easy: "diff diff-easy",
+  medium: "diff diff-medium",
+  hard: "diff diff-hard",
 };
 
 const LABELS = { easy: "Easy", medium: "Medium", hard: "Hard" };
@@ -38,9 +31,7 @@ export default function DifficultyChips({ value, onSet, onClear, disabled = fals
               if (selected) onClear();
               else onSet(level);
             }}
-            className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-              selected ? STYLES[level].on : STYLES[level].off
-            }`}
+            className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors disabled:opacity-50 ${STYLES[level]}`}
           >
             {LABELS[level]}
           </button>

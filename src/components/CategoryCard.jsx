@@ -10,9 +10,9 @@ export default function CategoryCard({ category, onEdit, onDelete }) {
       <div className="group relative h-full">
         <Link
           to={`/category/${category.id}`}
-          className="block h-full rounded-2xl border border-ink/10 bg-white p-6 shadow-card transition-all duration-200 hover:shadow-card-hover"
+          className="accent-card block h-full rounded-2xl border p-5 transition-all duration-200"
         >
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100 text-2xl">
+          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-100 text-xl">
             📁
           </div>
           <h2 className="text-lg font-semibold text-ink">{category.name}</h2>
@@ -21,7 +21,7 @@ export default function CategoryCard({ category, onEdit, onDelete }) {
               {category.description}
             </p>
           )}
-          <p className="mt-4 text-xs font-medium uppercase tracking-wide text-ink/40">
+          <p className="stat-num mt-4 text-3xl">
             {category.question_count ?? 0}{" "}
             {(category.question_count ?? 0) === 1 ? "question" : "questions"}
           </p>
@@ -30,14 +30,14 @@ export default function CategoryCard({ category, onEdit, onDelete }) {
         {/* Only rendered when the parent supplies handlers, i.e. for
             admins. Regular users must not see these at all. */}
         {(onEdit || onDelete) && (
-          <div className="pointer-events-none absolute right-3 top-3 flex gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+          <div className="card-actions pointer-events-none absolute right-3 top-3 flex gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
             {onEdit && (
               <button
                 type="button"
                 onClick={() => onEdit(category)}
                 title="Edit category"
                 aria-label={`Edit ${category.name}`}
-                className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-sm shadow-sm transition-colors hover:bg-emerald-50 hover:text-emerald-700"
+                className="icon-circle pointer-events-auto text-sm hover:bg-emerald-50 hover:text-emerald-700"
               >
                 ✏️
               </button>
@@ -48,7 +48,7 @@ export default function CategoryCard({ category, onEdit, onDelete }) {
                 onClick={() => onDelete(category)}
                 title="Delete category"
                 aria-label={`Delete ${category.name}`}
-                className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-sm shadow-sm transition-colors hover:bg-red-50 hover:text-red-700"
+                className="icon-circle pointer-events-auto text-sm hover:bg-red-50 hover:text-red-700"
               >
                 🗑️
               </button>

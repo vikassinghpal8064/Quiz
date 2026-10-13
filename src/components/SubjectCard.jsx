@@ -23,9 +23,9 @@ export default function SubjectCard({ subject, onEdit, onDelete }) {
       <div className="group relative h-full">
         <Link
           to={`/subject/${subject.id}`}
-          className="block h-full rounded-2xl border border-ink/10 bg-white p-6 shadow-card transition-all duration-200 hover:shadow-card-hover"
+          className="accent-card block h-full rounded-2xl border p-6 transition-all duration-200"
         >
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-2xl">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-2xl">
             {getIcon(subject.icon_name)}
           </div>
           <h2 className="text-lg font-semibold text-ink">{subject.name}</h2>
@@ -34,7 +34,7 @@ export default function SubjectCard({ subject, onEdit, onDelete }) {
               {subject.description}
             </p>
           )}
-          <p className="mt-4 text-xs font-medium uppercase tracking-wide text-ink/40">
+          <p className="card-chip mt-4">
             {subject.category_count ?? 0}{" "}
             {(subject.category_count ?? 0) === 1 ? "category" : "categories"}
           </p>
@@ -43,14 +43,14 @@ export default function SubjectCard({ subject, onEdit, onDelete }) {
         {/* Only rendered when the parent supplies handlers, i.e. for
             admins. Regular users must not see these at all. */}
         {(onEdit || onDelete) && (
-          <div className="pointer-events-none absolute right-3 top-3 flex gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+          <div className="card-actions pointer-events-none absolute right-3 top-3 flex gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
             {onEdit && (
               <button
                 type="button"
                 onClick={() => onEdit(subject)}
                 title="Edit subject"
                 aria-label={`Edit ${subject.name}`}
-                className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-sm shadow-sm transition-colors hover:bg-emerald-50 hover:text-emerald-700"
+                className="icon-circle pointer-events-auto text-sm hover:bg-emerald-50 hover:text-emerald-700"
               >
                 ✏️
               </button>
@@ -61,7 +61,7 @@ export default function SubjectCard({ subject, onEdit, onDelete }) {
                 onClick={() => onDelete(subject)}
                 title="Delete subject"
                 aria-label={`Delete ${subject.name}`}
-                className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-sm shadow-sm transition-colors hover:bg-red-50 hover:text-red-700"
+                className="icon-circle pointer-events-auto text-sm hover:bg-red-50 hover:text-red-700"
               >
                 🗑️
               </button>

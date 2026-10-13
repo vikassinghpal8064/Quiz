@@ -73,7 +73,7 @@ export default function FlagModal({
               <select
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm text-ink focus:border-emerald-500 focus:outline-none"
+                className="field mt-1 w-full px-3 py-2.5 text-sm"
               >
                 {FLAG_REASONS.map((r) => (
                   <option key={r.value} value={r.value}>
@@ -91,7 +91,7 @@ export default function FlagModal({
                 rows={3}
                 maxLength={2000}
                 placeholder="What looks wrong?"
-                className="mt-1 w-full resize-none rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm text-ink focus:border-emerald-500 focus:outline-none"
+                className="field mt-1 w-full resize-none px-3 py-2.5 text-sm"
               />
             </label>
 

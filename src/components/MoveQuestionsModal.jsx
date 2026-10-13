@@ -141,7 +141,7 @@ export default function MoveQuestionsModal({
                 value={subjectId}
                 disabled={loadingSubjects}
                 onChange={(e) => setSubjectId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm text-ink focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+                className="field mt-1 w-full px-3 py-2.5 text-sm disabled:opacity-50"
               >
                 {loadingSubjects && <option>Loading…</option>}
                 {subjects.map((s) => (
@@ -161,7 +161,7 @@ export default function MoveQuestionsModal({
                   setCategoryId(e.target.value);
                   setArmed(false);
                 }}
-                className="mt-1 w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm text-ink focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+                className="field mt-1 w-full px-3 py-2.5 text-sm disabled:opacity-50"
               >
                 <option value="">
                   {loadingCategories ? "Loading…" : "Select a category"}

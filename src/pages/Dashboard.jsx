@@ -114,7 +114,7 @@ export default function Dashboard() {
           )}
         </EmptyState>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="cards-grid grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {subjects.map((subject) => (
             <SubjectCard
               key={subject.id}

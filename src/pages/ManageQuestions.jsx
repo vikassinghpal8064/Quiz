@@ -8,9 +8,9 @@ import MoveQuestionsModal from "../components/MoveQuestionsModal";
 import { fetchAdminQuestions, DIFFICULTIES } from "../lib/questionMeta";
 
 const DIFFICULTY_BADGE = {
-  easy: "bg-emerald-100 text-emerald-700",
-  medium: "bg-amber-100 text-amber-800",
-  hard: "bg-red-100 text-red-700",
+  easy: "bg-sage text-on-accent",
+  medium: "bg-butter text-on-accent",
+  hard: "bg-pink text-on-accent",
 };
 
 const DIFFICULTY_FILTER_ON = {
@@ -222,7 +222,7 @@ export default function ManageQuestions() {
         </div>
         <Link
           to={`/admin/upload?subject=${paramSubject}&category=${paramCategory}`}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+          className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
         >
           ＋ Add Question
         </Link>
@@ -258,7 +258,7 @@ export default function ManageQuestions() {
             type="button"
             onClick={() => setStarredFilter((v) => !v)}
             aria-pressed={starredFilter}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+            className={`filter-pill rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
               starredFilter
                 ? "border-amber-500 bg-amber-50 text-amber-800"
                 : "border-ink/10 bg-white text-ink/60 hover:border-amber-300"
@@ -271,7 +271,7 @@ export default function ManageQuestions() {
             type="button"
             onClick={() => setFlaggedFilter((v) => !v)}
             aria-pressed={flaggedFilter}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+            className={`filter-pill rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
               flaggedFilter
                 ? "border-red-500 bg-red-50 text-red-700"
                 : "border-ink/10 bg-white text-ink/60 hover:border-red-300"
@@ -288,7 +288,7 @@ export default function ManageQuestions() {
                 type="button"
                 onClick={() => toggleDifficulty(level)}
                 aria-pressed={on}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize transition-colors ${
+                className={`filter-pill rounded-full border px-3 py-1 text-xs font-semibold capitalize transition-colors ${
                   on
                     ? DIFFICULTY_FILTER_ON[level]
                     : "border-ink/10 bg-white text-ink/60 hover:border-ink/25"
@@ -323,7 +323,7 @@ export default function ManageQuestions() {
             type="button"
             disabled={selection.size === 0}
             onClick={() => setMoveIds([...selection])}
-            className="ml-auto rounded-lg bg-ink px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-ink/80 disabled:opacity-40"
+            className="ml-auto rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-ink/80 disabled:opacity-40"
           >
             Move selected ({selection.size})
           </button>
@@ -414,7 +414,7 @@ export default function ManageQuestions() {
                     onClick={() => setMoveIds([q.id])}
                     title="Move question"
                     aria-label={`Move question ${q.id}`}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-sm shadow-sm transition-colors hover:bg-ink/5"
+                    className="icon-circle text-sm hover:bg-ink/5"
                   >
                     ⇄
                   </button>
@@ -423,7 +423,7 @@ export default function ManageQuestions() {
                     onClick={() => setEditQuestion(q)}
                     title="Edit question"
                     aria-label={`Edit question ${q.id}`}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-sm shadow-sm transition-colors hover:bg-emerald-50"
+                    className="icon-circle text-sm hover:bg-emerald-50 hover:text-emerald-700"
                   >
                     ✏️
                   </button>
@@ -432,7 +432,7 @@ export default function ManageQuestions() {
                     onClick={() => setDeleteQuestion(q)}
                     title="Delete question"
                     aria-label={`Delete question ${q.id}`}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 bg-white text-sm shadow-sm transition-colors hover:bg-red-50"
+                    className="icon-circle text-sm hover:bg-red-50 hover:text-red-700"
                   >
                     🗑️
                   </button>
@@ -449,14 +449,14 @@ export default function ManageQuestions() {
                         onClick={() => setEditQuestion(q)}
                         className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm transition-colors hover:bg-stone-50 ${
                           opt.is_correct
-                            ? "bg-emerald-50 text-emerald-900"
+                            ? "bg-sage/20 text-ink"
                             : "text-ink/70"
                         }`}
                       >
                         <span
                           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                             opt.is_correct
-                              ? "bg-emerald-600 text-white"
+                              ? "bg-sage text-on-accent"
                               : "bg-stone-100 text-ink/50"
                           }`}
                         >
@@ -466,7 +466,7 @@ export default function ManageQuestions() {
                           {opt.option_text}
                         </span>
                         {opt.is_correct && (
-                          <span className="text-xs font-semibold text-emerald-600">
+                          <span className="text-xs font-semibold text-correct">
                             correct ({correctLetter(q)})
                           </span>
                         )}

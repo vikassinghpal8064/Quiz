@@ -18,7 +18,7 @@ const EMPTY_FORM = {
 const NEW_OPTION_VALUE = "__new__";
 
 const fieldClass =
-  "mt-1 block w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/35 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:bg-stone-100";
+  "field mt-1 block w-full px-3 py-2.5 text-sm shadow-sm disabled:opacity-60";
 
 const labelClass = "block text-sm font-medium text-ink/70";
 

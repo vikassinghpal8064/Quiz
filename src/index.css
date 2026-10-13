@@ -1,180 +1,963 @@
 @import "tailwindcss";
 
+/* ============================================================
+   DESIGN TOKENS
+   A single dark, modern, mobile-first theme. Every colour in
+   the app resolves back to one of these variables, so there
+   are no scattered hardcoded values outside this file.
+   ============================================================ */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  /* System font stack only - no webfonts, no CDN. The geometric
+     feel comes from weight, tracking and size below. */
+  --font-sans:
+    ui-sans-serif, "SF Pro Display", "Segoe UI", Inter, Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-display:
+    ui-sans-serif, "SF Pro Display", "Segoe UI", Inter, Roboto,
+    "Helvetica Neue", Arial, sans-serif;
 
-  --color-cream: #f6f5f2;
-  --color-ink: #1d2433;
+  /* Base surfaces */
+  --color-cream: #1b1b1d; /* page background */
+  --color-ink: #ffffff; /* primary text on dark */
+  --color-base: #1b1b1d;
+  --color-surface: #242427;
+  --color-elevated: #2c2c30;
+  --color-sunken: #1f1f22;
+  --color-line: rgba(255, 255, 255, 0.08);
+  --color-muted: #9a9aa3;
 
+  /* Pastel accents */
+  --color-sage: #9cc68b;
+  --color-butter: #f6d77e;
+  --color-pink: #f3b4c8;
+  --color-lavender: #7c6ce6;
+  --color-lavender-deep: #6a5ad6;
+  --color-lavender-soft: #b7abf2;
+  --color-on-accent: #151517; /* dark text on pastel fills */
+
+  /* Layered soft shadows */
   --shadow-card:
-    0 1px 2px rgb(29 36 51 / 0.04),
-    0 12px 28px -16px rgb(29 36 51 / 0.16);
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 40px -24px rgba(0, 0, 0, 0.75);
   --shadow-card-hover:
-    0 2px 4px rgb(29 36 51 / 0.05),
-    0 20px 36px -16px rgb(29 36 51 / 0.24);
-}
-
-@layer base {
-  html {
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-  }
-
-  html.dark {
-    color-scheme: dark;
-  }
-
-  body {
-    background-color: var(--color-cream);
-    color: var(--color-ink);
-    font-family: var(--font-sans);
-  }
-
-  h1,
-  h2,
-  h3,
-  h4 {
-    font-family: var(--font-display);
-    letter-spacing: -0.01em;
-  }
+    0 2px 6px rgba(0, 0, 0, 0.45), 0 30px 64px -26px rgba(0, 0, 0, 0.85);
 }
 
 /* ============================================================
-   Dark Mode Theme
+   BASE
    ============================================================ */
-.dark {
-  --color-cream: #0f172a;
-  --color-ink: #e2e8f0;
-
-  --shadow-card:
-    0 1px 2px rgb(0 0 0 / 0.2),
-    0 12px 28px -16px rgb(0 0 0 / 0.55);
-  --shadow-card-hover:
-    0 2px 4px rgb(0 0 0 / 0.25),
-    0 20px 36px -16px rgb(0 0 0 / 0.6);
+:root {
+  color-scheme: dark;
 }
 
-.dark body {
-  background-color: #0f172a;
-  color: #e2e8f0;
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* --- Surfaces & cards --- */
-.dark .bg-white { background-color: #1e293b; }
-.dark .bg-white\/40 { background-color: rgb(30 41 59 / 0.4); }
-.dark .bg-white\/15 { background-color: rgb(30 41 59 / 0.15); }
+html.dark {
+  color-scheme: dark;
+}
 
-/* --- Neutral stone tints --- */
-.dark .bg-stone-50 { background-color: #243149; }
-.dark .bg-stone-100 { background-color: #243149; }
-.dark .bg-stone-200 { background-color: #334155; }
-.dark .bg-stone-200\/70 { background-color: rgb(51 65 85 / 0.7); }
-.dark .hover\:bg-stone-100:hover { background-color: #2c3a52; }
-.dark .hover\:bg-stone-200:hover { background-color: #3b4a63; }
-.dark .disabled\:bg-stone-100:disabled { background-color: #243149; }
+body {
+  margin: 0;
+  background-color: var(--color-base);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+}
 
-/* --- Semantic tints (dark-adjusted) --- */
-.dark .bg-emerald-50 { background-color: rgb(6 78 59 / 0.35); }
-.dark .bg-emerald-100 { background-color: rgb(6 78 59 / 0.55); }
-.dark .text-emerald-50 { color: #a7f3d0; }
-.dark .text-emerald-100 { color: #a7f3d0; }
-.dark .text-emerald-700 { color: #34d399; }
-.dark .text-emerald-800 { color: #6ee7b7; }
-.dark .text-emerald-950 { color: #d1fae5; }
-.dark .file\:bg-emerald-50::file-selector-button { background-color: rgb(6 78 59 / 0.35); }
-.dark .hover\:file\:bg-emerald-100:hover::file-selector-button { background-color: rgb(6 78 59 / 0.55); }
-.dark .file\:text-emerald-700::file-selector-button { color: #34d399; }
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
 
-.dark .bg-red-50 { background-color: rgb(127 29 29 / 0.3); }
-.dark .bg-red-100 { background-color: rgb(127 29 29 / 0.5); }
-.dark .text-red-500 { color: #f87171; }
-.dark .text-red-600 { color: #fca5a5; }
-.dark .text-red-700 { color: #fca5a5; }
+code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
 
-.dark .bg-amber-50 { background-color: rgb(120 53 15 / 0.35); }
-.dark .bg-amber-100 { background-color: rgb(120 53 15 / 0.5); }
-.dark .text-amber-700 { color: #fbbf24; }
-.dark .text-amber-800 { color: #fcd34d; }
-.dark .text-amber-900 { color: #fde68a; }
-.dark .text-amber-950 { color: #fef3c7; }
+::selection {
+  background: var(--color-lavender);
+  color: #fff;
+}
 
-/* --- Modal overlay (keep truly dark) --- */
-.dark .bg-ink\/50 { background-color: rgb(2 6 23 / 0.65); }
+/* ---- Styled scrollbars ---- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a40 transparent;
+}
 
-/* --- Toast (success uses bg-ink; give it contrast in dark) --- */
-.dark .bg-ink { background-color: #334155; }
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
 
-/* --- Ring offsets --- */
-.dark .ring-offset-white { --tw-ring-offset-color: #0f172a; }
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #34343a;
+  border: 3px solid var(--color-base);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #46464d;
+}
+
+/* ---- Focus rings: lavender, everywhere ---- */
+:focus-visible {
+  outline: 2px solid var(--color-lavender-soft);
+  outline-offset: 2px;
+}
+
+/* ---- Motion: short, consistent, press-down feedback ---- */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.16s ease,
+    opacity 0.18s ease;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
 
 /* ============================================================
-   Theme Toggle Button
+   PALETTE REMAP
+   The app's markup predates this theme, so the utility classes
+   it already uses are re-pointed at the tokens above. This is
+   the only place the old palette names are mentioned.
    ============================================================ */
-#theme-toggle {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 100;
+
+/* Surfaces */
+.bg-cream {
+  background-color: var(--color-base);
+}
+.bg-white {
+  background-color: var(--color-surface);
+}
+.bg-white\/40 {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+.bg-white\/15 {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+.bg-stone-50 {
+  background-color: var(--color-sunken);
+}
+.bg-stone-100 {
+  background-color: var(--color-elevated);
+}
+.bg-stone-200 {
+  background-color: #36363b;
+}
+.bg-stone-200\/70 {
+  background-color: rgba(54, 54, 59, 0.7);
+}
+.hover\:bg-stone-50:hover {
+  background-color: #323237;
+}
+.hover\:bg-stone-100:hover {
+  background-color: #333338;
+}
+.hover\:bg-stone-200:hover {
+  background-color: #3d3d43;
+}
+.disabled\:bg-stone-100:disabled {
+  background-color: var(--color-elevated);
+}
+
+/* Neutral translucent layers built from ink */
+.bg-ink {
+  background-color: var(--color-lavender-deep);
+}
+.bg-ink\/5 {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+.bg-ink\/10 {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+.bg-ink\/50 {
+  background-color: rgba(8, 8, 10, 0.66);
+}
+.hover\:bg-ink\/5:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+}
+.hover\:bg-ink\/10:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+.hover\:bg-ink\/80:hover {
+  background-color: #5b4cc9;
+}
+.hover\:bg-ink\/90:hover {
+  background-color: #5b4cc9;
+}
+
+/* Text: white base, muted scale on dark */
+.text-ink {
+  color: var(--color-ink);
+}
+.text-ink\/30 {
+  color: rgba(255, 255, 255, 0.42);
+}
+.text-ink\/35 {
+  color: rgba(255, 255, 255, 0.46);
+}
+.text-ink\/40 {
+  color: rgba(255, 255, 255, 0.5);
+}
+.text-ink\/45 {
+  color: rgba(255, 255, 255, 0.55);
+}
+.text-ink\/50 {
+  color: rgba(255, 255, 255, 0.58);
+}
+.text-ink\/55 {
+  color: rgba(255, 255, 255, 0.62);
+}
+.text-ink\/60 {
+  color: rgba(255, 255, 255, 0.67);
+}
+.text-ink\/65 {
+  color: rgba(255, 255, 255, 0.72);
+}
+.text-ink\/70 {
+  color: rgba(255, 255, 255, 0.76);
+}
+.text-ink\/75 {
+  color: rgba(255, 255, 255, 0.8);
+}
+.text-ink\/80 {
+  color: rgba(255, 255, 255, 0.85);
+}
+.placeholder\:text-ink\/35::placeholder {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+/* Borders/lines from ink */
+.border-ink\/5 {
+  border-color: rgba(255, 255, 255, 0.05);
+}
+.border-ink\/10 {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.border-ink\/15 {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.border-ink\/20 {
+  border-color: rgba(255, 255, 255, 0.13);
+}
+.border-ink\/25 {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* Emerald -> lavender (primary / selection / progress / focus) */
+.bg-emerald-500 {
+  background-color: var(--color-lavender);
+}
+.bg-emerald-600 {
+  background-color: var(--color-lavender-deep);
+}
+.bg-emerald-700 {
+  background-color: #5b4cc9;
+}
+.bg-emerald-50 {
+  background-color: rgba(124, 108, 230, 0.16);
+}
+.bg-emerald-100 {
+  background-color: rgba(124, 108, 230, 0.24);
+}
+.hover\:bg-emerald-600:hover {
+  background-color: var(--color-lavender-deep);
+}
+.hover\:bg-emerald-700:hover {
+  background-color: #5b4cc9;
+}
+.hover\:bg-emerald-50:hover {
+  background-color: rgba(124, 108, 230, 0.22);
+}
+.text-emerald-50 {
+  color: #edebfc;
+}
+.text-emerald-100 {
+  color: #e3e0fb;
+}
+.text-emerald-400 {
+  color: var(--color-lavender-soft);
+}
+.text-emerald-600 {
+  color: var(--color-lavender-soft);
+}
+.text-emerald-700 {
+  color: var(--color-lavender-soft);
+}
+.text-emerald-800 {
+  color: #cbc3f7;
+}
+.text-emerald-900 {
+  color: #e0dbfb;
+}
+.text-emerald-950 {
+  color: #ece9fd;
+}
+.border-emerald-200 {
+  border-color: rgba(124, 108, 230, 0.35);
+}
+.border-emerald-300 {
+  border-color: rgba(124, 108, 230, 0.5);
+}
+.border-emerald-500 {
+  border-color: var(--color-lavender);
+}
+.ring-emerald-500 {
+  --tw-ring-color: var(--color-lavender);
+}
+.ring-emerald-600 {
+  --tw-ring-color: var(--color-lavender);
+}
+.focus\:border-emerald-500:focus {
+  border-color: var(--color-lavender);
+}
+.focus\:ring-emerald-500:focus {
+  --tw-ring-color: var(--color-lavender);
+}
+.accent-emerald-600 {
+  accent-color: var(--color-lavender);
+}
+.file\:bg-emerald-50::file-selector-button {
+  background-color: rgba(124, 108, 230, 0.16);
+}
+.hover\:file\:bg-emerald-100:hover::file-selector-button {
+  background-color: rgba(124, 108, 230, 0.24);
+}
+.file\:text-emerald-700::file-selector-button {
+  color: var(--color-lavender-soft);
+}
+
+/* Amber -> butter (star / medium / warning) */
+.bg-amber-50 {
+  background-color: rgba(246, 215, 126, 0.16);
+}
+.bg-amber-100 {
+  background-color: rgba(246, 215, 126, 0.24);
+}
+.bg-amber-500,
+.bg-amber-600 {
+  background-color: var(--color-butter);
+}
+.bg-amber-700 {
+  background-color: #e8c65f;
+}
+.hover\:bg-amber-700:hover {
+  background-color: #e8c65f;
+}
+.text-amber-500 {
+  color: var(--color-butter);
+}
+.text-amber-600 {
+  color: #f1cb62;
+}
+.text-amber-700 {
+  color: #f3d178;
+}
+.text-amber-800 {
+  color: #f8e1a0;
+}
+.text-amber-800\/70 {
+  color: rgba(248, 225, 160, 0.72);
+}
+.text-amber-900 {
+  color: #fbeab8;
+}
+.text-amber-950 {
+  color: #fdf3d6;
+}
+.border-amber-200 {
+  border-color: rgba(246, 215, 126, 0.35);
+}
+.border-amber-300 {
+  border-color: rgba(246, 215, 126, 0.5);
+}
+.border-amber-500 {
+  border-color: var(--color-butter);
+}
+.ring-amber-400 {
+  --tw-ring-color: var(--color-butter);
+}
+
+/* Red -> pink (wrong / hard / flag / danger) */
+.bg-red-50 {
+  background-color: rgba(243, 180, 200, 0.14);
+}
+.bg-red-100 {
+  background-color: rgba(243, 180, 200, 0.22);
+}
+.bg-red-200 {
+  background-color: rgba(243, 180, 200, 0.3);
+}
+.bg-red-500,
+.bg-red-600 {
+  background-color: var(--color-pink);
+}
+.bg-red-700 {
+  background-color: #e79bb2;
+}
+.hover\:bg-red-50:hover {
+  background-color: rgba(243, 180, 200, 0.2);
+}
+.hover\:bg-red-200:hover {
+  background-color: rgba(243, 180, 200, 0.3);
+}
+.hover\:bg-red-600:hover {
+  background-color: var(--color-pink);
+}
+.hover\:bg-red-700:hover {
+  background-color: #e79bb2;
+}
+.text-red-500 {
+  color: #f6c3d3;
+}
+.text-red-600 {
+  color: var(--color-pink);
+}
+.text-red-700 {
+  color: #f7c7d7;
+}
+.text-red-800 {
+  color: #fad7e2;
+}
+.border-red-200 {
+  border-color: rgba(243, 180, 200, 0.32);
+}
+.border-red-300 {
+  border-color: rgba(243, 180, 200, 0.45);
+}
+.border-red-500 {
+  border-color: var(--color-pink);
+}
+.border-l-red-500 {
+  border-left-color: var(--color-pink);
+}
+.border-t-red-200 {
+  border-top-color: rgba(243, 180, 200, 0.32);
+}
+.border-r-red-200 {
+  border-right-color: rgba(243, 180, 200, 0.32);
+}
+.border-b-red-200 {
+  border-bottom-color: rgba(243, 180, 200, 0.32);
+}
+.ring-red-400 {
+  --tw-ring-color: var(--color-pink);
+}
+
+/* Violet -> lavender (new-question accent) */
+.bg-violet-50 {
+  background-color: rgba(124, 108, 230, 0.16);
+}
+.bg-violet-100 {
+  background-color: rgba(124, 108, 230, 0.24);
+}
+.bg-violet-500 {
+  background-color: var(--color-lavender);
+}
+.text-violet-800 {
+  color: #cbc3f7;
+}
+.text-violet-800\/70 {
+  color: rgba(203, 195, 247, 0.72);
+}
+.text-violet-900 {
+  color: #e0dbfb;
+}
+.text-violet-950 {
+  color: #ece9fd;
+}
+
+/* Sky -> sage (starred-review accent) */
+.bg-sky-50 {
+  background-color: rgba(156, 198, 139, 0.16);
+}
+.bg-sky-500 {
+  background-color: var(--color-sage);
+}
+.text-sky-800 {
+  color: #bfddb2;
+}
+.text-sky-800\/70 {
+  color: rgba(191, 221, 178, 0.72);
+}
+.text-sky-950 {
+  color: #ddedd6;
+}
+
+/* Dark text on pastel-filled controls (AA contrast) */
+.bg-red-500.text-white,
+.bg-red-600.text-white,
+.bg-red-700.text-white,
+.bg-amber-500.text-white,
+.bg-amber-600.text-white,
+.bg-amber-700.text-white,
+.bg-sage.text-white,
+.bg-butter.text-white,
+.bg-pink.text-white {
+  color: var(--color-on-accent);
+}
+
+/* Ring offsets sit on the dark base */
+.ring-offset-white {
+  --tw-ring-offset-color: var(--color-base);
+}
+
+/* Slightly rounder inner surfaces + a touch more tracking on labels */
+.rounded-2xl {
+  border-radius: 24px;
+}
+.rounded-xl {
+  border-radius: 16px;
+}
+.rounded-lg {
+  border-radius: 12px;
+}
+.tracking-wide {
+  letter-spacing: 0.04em;
+}
+.tracking-widest {
+  letter-spacing: 0.12em;
+}
+
+/* ============================================================
+   COMPONENTS
+   ============================================================ */
+
+/* Generic elevated surface */
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 24px;
+  box-shadow: var(--shadow-card);
+}
+
+.card-lift {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Pastel accent cards: background + foreground come from variables so
+   a card can be recoloured without touching its inner markup. */
+.accent-card {
+  background-color: var(--card-bg, var(--color-sage));
+  color: var(--card-fg, var(--color-on-accent));
+  border-color: rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-card);
+}
+
+.accent-sage {
+  --card-bg: var(--color-sage);
+  --card-fg: var(--color-on-accent);
+  --card-fg-muted: rgba(21, 21, 23, 0.7);
+  --card-icon-bg: rgba(21, 21, 23, 0.12);
+}
+.accent-butter {
+  --card-bg: var(--color-butter);
+  --card-fg: var(--color-on-accent);
+  --card-fg-muted: rgba(21, 21, 23, 0.7);
+  --card-icon-bg: rgba(21, 21, 23, 0.12);
+}
+.accent-pink {
+  --card-bg: var(--color-pink);
+  --card-fg: var(--color-on-accent);
+  --card-fg-muted: rgba(21, 21, 23, 0.7);
+  --card-icon-bg: rgba(21, 21, 23, 0.12);
+}
+.accent-lavender {
+  /* Deeper lavender so white body text clears WCAG AA on the fill. */
+  --card-bg: var(--color-lavender-deep);
+  --card-fg: #ffffff;
+  --card-fg-muted: rgba(255, 255, 255, 0.92);
+  --card-icon-bg: rgba(255, 255, 255, 0.22);
+}
+
+/* Inside a pastel card, neutral text/borders/surfaces flip to the
+   card's foreground so nothing washes out. */
+.accent-card h1,
+.accent-card h2,
+.accent-card h3,
+.accent-card .text-ink {
+  color: var(--card-fg, var(--color-on-accent));
+}
+.accent-card .text-ink\/40,
+.accent-card .text-ink\/45,
+.accent-card .text-ink\/50,
+.accent-card .text-ink\/55,
+.accent-card .text-ink\/60,
+.accent-card .text-ink\/65,
+.accent-card .text-ink\/70,
+.accent-card .text-ink\/75,
+.accent-card .text-ink\/80 {
+  color: var(--card-fg-muted, rgba(21, 21, 23, 0.7));
+}
+.accent-card .bg-emerald-50,
+.accent-card .bg-stone-100,
+.accent-card .bg-white,
+.accent-card .bg-white\/40 {
+  background-color: var(--card-icon-bg, rgba(21, 21, 23, 0.12));
+}
+.accent-card .border-ink\/10,
+.accent-card .border-ink\/15,
+.accent-card .border-ink\/20,
+.accent-card .border-ink\/25 {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* Rotating accent fills for a grid of cards. */
+.cards-grid > *:nth-child(4n + 1) > * > .accent-card,
+.cards-grid > *:nth-child(4n + 1) .accent-card {
+  --card-bg: var(--color-sage);
+  --card-fg: var(--color-on-accent);
+  --card-fg-muted: rgba(21, 21, 23, 0.7);
+  --card-icon-bg: rgba(21, 21, 23, 0.12);
+}
+.cards-grid > *:nth-child(4n + 2) .accent-card {
+  --card-bg: var(--color-butter);
+  --card-fg: var(--color-on-accent);
+  --card-fg-muted: rgba(21, 21, 23, 0.7);
+  --card-icon-bg: rgba(21, 21, 23, 0.12);
+}
+.cards-grid > *:nth-child(4n + 3) .accent-card {
+  --card-bg: var(--color-pink);
+  --card-fg: var(--color-on-accent);
+  --card-fg-muted: rgba(21, 21, 23, 0.7);
+  --card-icon-bg: rgba(21, 21, 23, 0.12);
+}
+.cards-grid > *:nth-child(4n + 4) .accent-card {
+  --card-bg: var(--color-lavender-deep);
+  --card-fg: #ffffff;
+  --card-fg-muted: rgba(255, 255, 255, 0.92);
+  --card-icon-bg: rgba(255, 255, 255, 0.22);
+}
+
+/* Circular icon buttons (arrow / edit / delete) */
+.icon-circle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border: 1px solid rgb(29 36 51 / 0.1);
-  border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.85);
-  box-shadow:
-    0 1px 2px rgb(29 36 51 / 0.05),
-    0 12px 28px -16px rgb(29 36 51 / 0.2);
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background-color: var(--color-elevated);
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
-  font-size: 1.25rem;
+}
+
+.icon-circle:hover {
+  background-color: #34343a;
+  color: #fff;
+}
+
+/* Pill button + dark circular arrow that lives inside a mode card */
+.pill-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background-color: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  flex: none;
+}
+
+.accent-lavender .pill-arrow {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+/* Count chip used on the pastel cards */
+.card-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: rgba(0, 0, 0, 0.1);
+  color: inherit;
+}
+
+/* Big bold stat number with a small muted label under it */
+.stat-num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
   line-height: 1;
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
-#theme-toggle:hover {
-  border-color: rgb(16 185 129 / 0.5);
-  transform: scale(1.05);
+.label-caps {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
 }
 
-#theme-toggle:active {
-  transform: scale(0.95);
+/* Filter pills: active is a lavender fill */
+.filter-pill {
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.62);
+  cursor: pointer;
 }
 
-#theme-toggle .icon-sun {
-  display: none;
+.filter-pill:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
-#theme-toggle .icon-moon {
-  display: inline;
+.filter-pill[aria-pressed="true"] {
+  background-color: var(--color-lavender-deep);
+  border-color: var(--color-lavender-deep);
+  color: #fff;
 }
 
-html.dark #theme-toggle {
-  border-color: rgb(226 232 240 / 0.15);
-  background-color: rgb(30 41 59 / 0.9);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.3),
-    0 12px 28px -16px rgb(0 0 0 / 0.6);
+/* Difficulty pills */
+.diff {
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+.diff[aria-pressed="true"].diff-easy {
+  background-color: var(--color-sage);
+  border-color: var(--color-sage);
+  color: var(--color-on-accent);
+}
+.diff[aria-pressed="true"].diff-medium {
+  background-color: var(--color-butter);
+  border-color: var(--color-butter);
+  color: var(--color-on-accent);
+}
+.diff[aria-pressed="true"].diff-hard {
+  background-color: var(--color-pink);
+  border-color: var(--color-pink);
+  color: var(--color-on-accent);
+}
+.diff-easy:hover {
+  border-color: var(--color-sage);
+  color: #cfe4c6;
+}
+.diff-medium:hover {
+  border-color: var(--color-butter);
+  color: #f8e6b4;
+}
+.diff-hard:hover {
+  border-color: var(--color-pink);
+  color: #f8d3df;
 }
 
-html.dark #theme-toggle .icon-sun {
-  display: inline;
+/* Progress bars */
+.progress-track {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-fill {
+  background-color: var(--color-lavender);
+  border-radius: 999px;
 }
 
-html.dark #theme-toggle .icon-moon {
-  display: none;
+/* Status badges on the results screen */
+.badge-correct {
+  background-color: var(--color-sage);
+  color: var(--color-on-accent);
+}
+.badge-wrong {
+  background-color: var(--color-pink);
+  color: var(--color-on-accent);
+}
+
+/* Answer review cards: a coloured left accent */
+.answer-card {
+  border-radius: 20px;
+  border: 1px solid var(--color-line);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+.answer-card.is-correct {
+  border-left: 4px solid var(--color-sage);
+}
+.answer-card.is-wrong {
+  border-left: 4px solid var(--color-pink);
+}
+
+/* ---- Quiz-taking: question card + answer options ---- */
+.quiz-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* A soft rainbow accent along the top of the question card. */
+.quiz-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--color-sage),
+    var(--color-butter),
+    var(--color-pink),
+    var(--color-lavender)
+  );
+}
+
+.quiz-option {
+  background-color: var(--color-surface);
+  border-color: var(--color-line);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+.quiz-option:hover {
+  background-color: #2a2a2f;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.quiz-letter {
+  background-color: var(--color-elevated);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* Four pastel letter colours, rotating down the list. */
+.quiz-options > .quiz-option:not(.is-selected):nth-child(4n + 1) .quiz-letter {
+  background-color: var(--color-sage);
+  color: var(--color-on-accent);
+}
+.quiz-options > .quiz-option:not(.is-selected):nth-child(4n + 2) .quiz-letter {
+  background-color: var(--color-butter);
+  color: var(--color-on-accent);
+}
+.quiz-options > .quiz-option:not(.is-selected):nth-child(4n + 3) .quiz-letter {
+  background-color: var(--color-pink);
+  color: var(--color-on-accent);
+}
+.quiz-options > .quiz-option:not(.is-selected):nth-child(4n + 4) .quiz-letter {
+  background-color: var(--color-lavender-deep);
+  color: #ffffff;
+}
+
+/* Selected answer: a solid lavender card with a matching light letter. */
+.quiz-option.is-selected {
+  background-color: var(--color-lavender-deep);
+  border-color: var(--color-lavender);
+  color: #ffffff;
+}
+.quiz-option.is-selected .quiz-letter {
+  background-color: #ffffff;
+  color: var(--color-lavender-deep);
+}
+
+/* Inputs */
+.field {
+  background-color: var(--color-elevated);
+  border: 1px solid var(--color-line);
+  color: #fff;
+  border-radius: 12px;
+}
+.field::placeholder {
+  color: rgba(255, 255, 255, 0.52);
+}
+.field:focus {
+  border-color: var(--color-lavender);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 108, 230, 0.28);
+}
+
+/* Toasts */
+.toast {
+  border-radius: 16px;
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-card-hover);
+}
+.toast-success {
+  background-color: var(--color-elevated);
+  color: #fff;
+}
+.toast-error {
+  background-color: var(--color-pink);
+  color: var(--color-on-accent);
+}
+
+/* Answers on the results screen */
+.text-correct {
+  color: var(--color-sage);
+}
+.text-wrong {
+  color: var(--color-pink);
+}
+
+/* Small translucent block used for the score-card stats. When it sits on a
+   pastel card it inherits the card's dark-on-pastel treatment. */
+.stat-block {
+  background-color: rgba(0, 0, 0, 0.12);
+  border-radius: 16px;
+}
+
+/* Extra foreground overrides for the pastel cards (some elements use these
+   very light ink tints, which would otherwise wash out on a pastel fill). */
+.accent-card .text-ink\/30,
+.accent-card .text-ink\/35 {
+  color: var(--card-fg-muted, rgba(21, 21, 23, 0.7));
+}
+
+.accent-card .progress-track {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+.accent-card .progress-fill {
+  background-color: var(--card-fg, var(--color-on-accent));
+}
+
+/* Card hover actions are always visible on touch devices (no hover). */
+@media (hover: none) {
+  .card-actions {
+    opacity: 1 !important;
+  }
 }
 
 /* ============================================================
-   Account Sidebar Toggle
-   Mirrors #theme-toggle's geometry so the two buttons always
-   sit side by side in the top-right corner.
+   Floating corner buttons (theme toggle + account chip)
    ============================================================ */
+#theme-toggle,
 #account-toggle {
   position: fixed;
   top: 1rem;
-  right: 4.25rem; /* 1rem offset + 2.75rem button + 0.5rem gap */
   z-index: 100;
   display: inline-flex;
   align-items: center;
@@ -182,41 +965,56 @@ html.dark #theme-toggle .icon-moon {
   width: 2.75rem;
   height: 2.75rem;
   padding: 0;
-  border: 1px solid rgb(29 36 51 / 0.1);
-  border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.85);
-  box-shadow:
-    0 1px 2px rgb(29 36 51 / 0.05),
-    0 12px 28px -16px rgb(29 36 51 / 0.2);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background-color: rgba(44, 44, 48, 0.86);
+  color: #fff;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.8);
   cursor: pointer;
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1.15rem;
   line-height: 1;
-  color: rgb(29 36 51 / 0.75);
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
+#theme-toggle {
+  right: 1rem;
+}
+
+#account-toggle {
+  right: 4.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+#theme-toggle:hover,
 #account-toggle:hover {
-  border-color: rgb(16 185 129 / 0.5);
-  transform: scale(1.05);
+  border-color: var(--color-lavender);
+  transform: translateY(-1px);
 }
 
+#theme-toggle:active,
 #account-toggle:active {
   transform: scale(0.95);
 }
 
-html.dark #account-toggle {
-  border-color: rgb(226 232 240 / 0.15);
-  background-color: rgb(30 41 59 / 0.9);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.3),
-    0 12px 28px -16px rgb(0 0 0 / 0.6);
-  color: rgb(226 232 240 / 0.8);
+#theme-toggle .icon-sun {
+  display: none;
+}
+#theme-toggle .icon-moon {
+  display: inline;
+}
+
+html.dark #theme-toggle .icon-sun {
+  display: inline;
+}
+html.dark #theme-toggle .icon-moon {
+  display: none;
 }
 
 /* ============================================================
-   Responsive: Mobile  (<= 639px)
+   Responsive: Mobile (<= 639px)
    ============================================================ */
 @media (max-width: 639px) {
   :root {
@@ -239,7 +1037,6 @@ html.dark #account-toggle {
     line-height: 1.1;
   }
 
-  /* Cards fill width with a touch more breathing room */
   .rounded-2xl.border.bg-white.p-6,
   .rounded-2xl.border.bg-white.p-8,
   .rounded-2xl.border.bg-white.p-5 {
@@ -247,7 +1044,6 @@ html.dark #account-toggle {
     padding-right: 1.25rem;
   }
 
-  /* Keep stat grids from feeling cramped */
   .grid.grid-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.75rem;
@@ -262,18 +1058,15 @@ html.dark #account-toggle {
     padding-right: 0.5rem;
   }
 
-  /* Mode buttons stack full width */
   .grid.sm\:grid-cols-2 {
     grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 
-  /* Question review cards: keep badges readable */
   .flex.items-start.justify-between {
     flex-wrap: wrap;
     row-gap: 0.5rem;
   }
 
-  /* Toggle button sits clear of content on small screens */
   #theme-toggle {
     top: 0.75rem;
     right: 0.75rem;
@@ -284,42 +1077,37 @@ html.dark #account-toggle {
 
   #account-toggle {
     top: 0.75rem;
-    right: 3.75rem; /* 0.75rem offset + 2.5rem button + 0.5rem gap */
+    right: 3.75rem;
     width: 2.5rem;
     height: 2.5rem;
     font-size: 0.85rem;
   }
 
-  /* Bottom action bar: stack on narrow screens */
   .flex.items-center.justify-between:not(.shrink-0) {
     gap: 0.5rem;
   }
 
-  /* Question palette buttons stay tappable */
   .rounded-lg.font-semibold {
     touch-action: manipulation;
   }
 
-  /* Admin form rows stack */
   .flex.items-center.gap-3 {
     gap: 0.5rem;
   }
 }
 
 /* ============================================================
-   Responsive: Tablet / iPad  (640px - 1023px)
+   Responsive: Tablet (640px - 1023px)
    ============================================================ */
 @media (min-width: 640px) and (max-width: 1023px) {
   :root {
     font-size: 16px;
   }
 
-  /* Two-column grids are friendlier on tablet than three */
   .lg\:grid-cols-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  /* Slightly larger touch targets in the question palette */
   .h-9.w-9 {
     width: 2.5rem;
     height: 2.5rem;
@@ -332,12 +1120,12 @@ html.dark #account-toggle {
 
   #account-toggle {
     top: 1.25rem;
-    right: 4.5rem; /* 1.25rem offset + 2.75rem button + 0.5rem gap */
+    right: 4.5rem;
   }
 }
 
 /* ============================================================
-   Reduced motion & focus accessibility
+   Reduced motion
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -348,14 +1136,12 @@ html.dark #account-toggle {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
 
-#theme-toggle:focus-visible,
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid #10b981;
-  outline-offset: 2px;
+  button:not(:disabled):active {
+    transform: none;
+  }
+
+  .card-lift:hover {
+    transform: none;
+  }
 }

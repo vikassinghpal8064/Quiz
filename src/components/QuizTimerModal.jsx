@@ -14,7 +14,7 @@ const panel = {
 };
 
 const fieldClass =
-  "mt-1 block w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/35 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
+  "field mt-1 block w-full px-3 py-2.5 text-sm shadow-sm";
 
 const labelClass = "block text-sm font-medium text-ink/70";
 

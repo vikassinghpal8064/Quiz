@@ -484,7 +484,7 @@ export default function QuizTaking() {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.22, ease: "easeOut" }}
-        className="rounded-2xl border border-ink/10 bg-white p-6 shadow-card"
+        className="quiz-card rounded-2xl border border-ink/10 bg-white p-6 shadow-card"
       >
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-lg font-semibold leading-relaxed text-ink">
@@ -519,26 +519,18 @@ export default function QuizTaking() {
           />
         )}
 
-        <div className="mt-6 space-y-2">
+        <div className="quiz-options mt-6 space-y-2">
           {current.options.map((opt, i) => {
             const isSelected = answers[current.id] === opt.id;
             return (
               <button
                 key={opt.id}
                 onClick={() => selectOption(current.id, opt.id)}
-                className={`flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3 text-left text-sm font-medium transition-all ${
-                  isSelected
-                    ? "border-emerald-500 bg-emerald-50 text-emerald-950"
-                    : "border-ink/10 bg-white text-ink/75 hover:border-ink/25 hover:bg-stone-50"
+                className={`quiz-option flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3 text-left text-sm font-medium transition-all ${
+                  isSelected ? "is-selected" : ""
                 }`}
               >
-                <span
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                    isSelected
-                      ? "bg-emerald-600 text-white"
-                      : "bg-stone-100 text-ink/50"
-                  }`}
-                >
+                <span className="quiz-letter flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                   {["A", "B", "C", "D"][i]}
                 </span>
                 {opt.option_text}
@@ -552,7 +544,7 @@ export default function QuizTaking() {
         <button
           onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
           disabled={currentIndex === 0}
-          className="rounded-xl px-4 py-2 text-sm font-medium text-ink/60 transition-colors hover:bg-stone-100 disabled:opacity-40"
+          className="rounded-full px-4 py-2 text-sm font-medium text-ink/60 transition-colors hover:bg-stone-100 disabled:opacity-40"
         >
           ← Previous
         </button>
@@ -561,7 +553,7 @@ export default function QuizTaking() {
           <button
             onClick={submitTest}
             disabled={submitting}
-            className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
+            className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
           >
             {submitting ? "Submitting…" : "Submit Test"}
           </button>
@@ -570,7 +562,7 @@ export default function QuizTaking() {
             onClick={() =>
               setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))
             }
-            className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
           >
             Next →
           </button>

@@ -292,12 +292,12 @@ export default function Results() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
-        className="rounded-2xl border border-ink/10 bg-white p-8 text-center shadow-card"
+        className="accent-card accent-sage rounded-2xl border p-8 text-center"
       >
-        <p className="text-sm font-medium uppercase tracking-widest text-ink/40">
+        <p className="label-caps text-ink/40">
           Your Score
         </p>
-        <p className="mt-3 font-display text-6xl font-semibold tracking-tight text-ink">
+        <p className="stat-num mt-3 font-display text-6xl text-ink">
           {attempt.score}
           <span className="text-3xl font-normal text-ink/35">
             {" "}
@@ -305,45 +305,39 @@ export default function Results() {
           </span>
         </p>
 
-        <div className="mx-auto mt-5 h-3 w-full max-w-xs overflow-hidden rounded-full bg-ink/10">
+        <div className="progress-track mx-auto mt-5 h-3 w-full max-w-xs">
           <motion.div
-            className={`h-full rounded-full ${
-              percentage >= 70
-                ? "bg-emerald-500"
-                : percentage >= 40
-                  ? "bg-amber-500"
-                  : "bg-red-500"
-            }`}
+            className="progress-fill h-full"
             initial={{ width: 0 }}
             animate={{ width: `${percentage}%` }}
             transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
           />
         </div>
 
-        <p className="mt-2 font-display text-2xl font-semibold text-ink">
+        <p className="stat-num mt-2 font-display text-2xl text-ink">
           {percentage}%
         </p>
 
         <div className="mx-auto mt-6 grid max-w-sm grid-cols-3 gap-4">
-          <div className="rounded-xl bg-emerald-50 px-4 py-3">
-            <p className="text-2xl font-semibold text-emerald-700">
+          <div className="stat-block px-4 py-3">
+            <p className="stat-num text-2xl text-ink">
               {correctCount}
             </p>
-            <p className="text-xs font-medium uppercase tracking-wide text-emerald-600">
+            <p className="label-caps mt-1 text-ink/45">
               Correct
             </p>
           </div>
-          <div className="rounded-xl bg-red-50 px-4 py-3">
-            <p className="text-2xl font-semibold text-red-600">{wrongCount}</p>
-            <p className="text-xs font-medium uppercase tracking-wide text-red-500">
+          <div className="stat-block px-4 py-3">
+            <p className="stat-num text-2xl text-ink">{wrongCount}</p>
+            <p className="label-caps mt-1 text-ink/45">
               Wrong
             </p>
           </div>
-          <div className="rounded-xl bg-stone-100 px-4 py-3">
-            <p className="text-2xl font-semibold text-ink">
+          <div className="stat-block px-4 py-3">
+            <p className="stat-num text-2xl text-ink">
               {timeTaken ?? "—"}
             </p>
-            <p className="text-xs font-medium uppercase tracking-wide text-ink/45">
+            <p className="label-caps mt-1 text-ink/45">
               Time Taken
             </p>
           </div>
@@ -355,7 +349,7 @@ export default function Results() {
         <button
           onClick={() => setRetakeTimerOpen(true)}
           disabled={retaking}
-          className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
+          className="rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
         >
           {retaking ? "Starting…" : "Retake This Test"}
         </button>
@@ -376,10 +370,8 @@ export default function Results() {
           <motion.div
             key={ans.answer_id}
             variants={itemVariants}
-            className={`rounded-xl border bg-white p-5 shadow-card ${
-              ans.is_correct
-                ? "border-ink/10"
-                : "border-l-4 border-l-red-500 border-t-red-200 border-r-red-200 border-b-red-200"
+            className={`answer-card p-5 ${
+              ans.is_correct ? "is-correct" : "is-wrong"
             }`}
           >
             <div className="flex items-start justify-between gap-3">
@@ -408,8 +400,8 @@ export default function Results() {
                 <span
                   className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
                     ans.is_correct
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-red-100 text-red-600"
+                      ? "badge-correct"
+                      : "badge-wrong"
                   }`}
                 >
                   {ans.is_correct ? "Correct" : "Wrong"}
@@ -438,8 +430,8 @@ export default function Results() {
                 <span
                   className={
                     ans.is_correct
-                      ? "font-semibold text-emerald-700"
-                      : "font-semibold text-red-600"
+                      ? "font-semibold text-correct"
+                      : "font-semibold text-wrong"
                   }
                 >
                   {ans.selected_option_text ?? "—"}
@@ -448,7 +440,7 @@ export default function Results() {
               {!ans.is_correct && (
                 <p>
                   <span className="text-ink/50">Correct answer: </span>
-                  <span className="font-semibold text-emerald-700">
+                  <span className="font-semibold text-correct">
                     {ans.correct_option_text}
                   </span>
                 </p>
@@ -469,7 +461,7 @@ export default function Results() {
         <button
           onClick={() => setRetakeTimerOpen(true)}
           disabled={retaking}
-          className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
+          className="rounded-full bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
         >
           {retaking ? "Starting…" : "Retake This Test"}
         </button>
