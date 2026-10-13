@@ -4,7 +4,17 @@ import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import BackButton from "../components/BackButton";
 import StarIcon from "../components/StarIcon";
+import FlagIcon from "../components/FlagIcon";
+import FlagModal from "../components/FlagModal";
+import DifficultyChips from "../components/DifficultyChips";
 import QuizTimerModal from "../components/QuizTimerModal";
+import {
+  fetchQuestionMeta,
+  fileFlag,
+  withdrawFlag,
+  setDifficulty as saveDifficulty,
+  clearDifficulty as removeDifficulty,
+} from "../lib/questionMeta";
 
 function formatTime(startedAt, finishedAt) {
   if (!startedAt || !finishedAt) return null;
@@ -34,6 +44,11 @@ export default function Results() {
   const [data, setData] = useState(null);
   const [stats, setStats] = useState({});
   const [starred, setStarred] = useState(new Set());
+  const [flaggedMap, setFlaggedMap] = useState({});
+  const [difficultyMap, setDifficultyMap] = useState({});
+  const [flagTarget, setFlagTarget] = useState(null);
+  const [flagBusy, setFlagBusy] = useState(false);
+  const [flagError, setFlagError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [retaking, setRetaking] = useState(false);
@@ -78,10 +93,33 @@ export default function Results() {
           }
         }
 
+        // My own flag / difficulty for each answered question. A failure here
+        // must not break the results screen.
+        let meta = {};
+        try {
+          meta = await fetchQuestionMeta((body.answers ?? []).map((a) => a.question_id));
+        } catch {
+          // ignore - flags/difficulty are an enhancement to the review screen
+        }
+
         if (!cancelled) {
           setData(body);
           setStats(statsMap);
           setStarred(starredIds);
+          setFlaggedMap(
+            Object.fromEntries(
+              Object.entries(meta)
+                .filter(([, m]) => m.flagged)
+                .map(([id, m]) => [id, m.flag])
+            )
+          );
+          setDifficultyMap(
+            Object.fromEntries(
+              Object.entries(meta)
+                .filter(([, m]) => m.difficulty)
+                .map(([id, m]) => [id, m.difficulty])
+            )
+          );
         }
       } catch (err) {
         if (!cancelled) setError(err.message);
@@ -123,6 +161,61 @@ export default function Results() {
         }
         return next;
       });
+    }
+  }
+
+  function openFlag(questionId) {
+    setFlagError(null);
+    setFlagTarget(questionId);
+  }
+
+  async function submitFlag(reason, comment) {
+    if (flagTarget == null) return;
+    setFlagBusy(true);
+    setFlagError(null);
+    try {
+      const row = await fileFlag(flagTarget, reason, comment);
+      setFlaggedMap((prev) => ({
+        ...prev,
+        [flagTarget]: { reason: row.reason, comment: row.comment, status: row.status },
+      }));
+      setFlagTarget(null);
+    } catch (err) {
+      setFlagError(err.message);
+    } finally {
+      setFlagBusy(false);
+    }
+  }
+
+  async function withdrawMyFlag() {
+    if (flagTarget == null) return;
+    setFlagBusy(true);
+    setFlagError(null);
+    try {
+      await withdrawFlag(flagTarget);
+      setFlaggedMap((prev) => {
+        const next = { ...prev };
+        delete next[flagTarget];
+        return next;
+      });
+      setFlagTarget(null);
+    } catch (err) {
+      setFlagError(err.message);
+    } finally {
+      setFlagBusy(false);
+    }
+  }
+
+  // Optimistic, reverts on failure, same pattern as the star toggle.
+  async function changeDifficulty(questionId, next) {
+    const prev = difficultyMap[questionId] ?? null;
+    if (prev === next) return;
+    setDifficultyMap((map) => ({ ...map, [questionId]: next }));
+    try {
+      if (next === null) await removeDifficulty(questionId);
+      else await saveDifficulty(questionId, next);
+    } catch {
+      setDifficultyMap((map) => ({ ...map, [questionId]: prev }));
     }
   }
 
@@ -302,6 +395,11 @@ export default function Results() {
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                <FlagIcon
+                  flagged={Boolean(flaggedMap[ans.question_id])}
+                  onToggle={() => openFlag(ans.question_id)}
+                  size={20}
+                />
                 <StarIcon
                   starred={starred.has(ans.question_id)}
                   onToggle={() => toggleStar(ans.question_id)}
@@ -318,6 +416,13 @@ export default function Results() {
                 </span>
               </div>
             </div>
+
+            <DifficultyChips
+              className="mt-3"
+              value={difficultyMap[ans.question_id] ?? null}
+              onSet={(level) => changeDifficulty(ans.question_id, level)}
+              onClear={() => changeDifficulty(ans.question_id, null)}
+            />
 
             {ans.image_url && (
               <img
@@ -374,6 +479,16 @@ export default function Results() {
         open={retakeTimerOpen}
         onClose={() => setRetakeTimerOpen(false)}
         onStart={handleRetakeTimerStart}
+      />
+
+      <FlagModal
+        open={flagTarget !== null}
+        existing={flagTarget != null ? flaggedMap[flagTarget] ?? null : null}
+        onClose={() => setFlagTarget(null)}
+        onSubmit={submitFlag}
+        onWithdraw={withdrawMyFlag}
+        busy={flagBusy}
+        error={flagError}
       />
     </div>
   );

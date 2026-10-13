@@ -4,6 +4,16 @@ import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import BackButton from "../components/BackButton";
 import StarIcon from "../components/StarIcon";
+import FlagIcon from "../components/FlagIcon";
+import FlagModal from "../components/FlagModal";
+import DifficultyChips from "../components/DifficultyChips";
+import {
+  fetchQuestionMeta,
+  fileFlag,
+  withdrawFlag,
+  setDifficulty as saveDifficulty,
+  clearDifficulty as removeDifficulty,
+} from "../lib/questionMeta";
 
 function formatTime(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -37,6 +47,12 @@ export default function QuizTaking() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [starred, setStarred] = useState(new Set());
+  // Per-question flag (object) and difficulty (string) for the CURRENT user.
+  const [flaggedMap, setFlaggedMap] = useState({});
+  const [difficultyMap, setDifficultyMap] = useState({});
+  const [flagTarget, setFlagTarget] = useState(null);
+  const [flagBusy, setFlagBusy] = useState(false);
+  const [flagError, setFlagError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -181,9 +197,31 @@ export default function QuizTaking() {
           });
         }
 
+        let meta = {};
+        try {
+          meta = await fetchQuestionMeta(data.map((q) => q.id));
+        } catch {
+          // Meta (my flag / my difficulty) is a nice-to-have; a failure here
+          // must never block taking the quiz.
+        }
+
         if (!cancelled) {
           setStarred(starredIds);
           setQuestions(data);
+          setFlaggedMap(
+            Object.fromEntries(
+              Object.entries(meta)
+                .filter(([, m]) => m.flagged)
+                .map(([id, m]) => [id, m.flag])
+            )
+          );
+          setDifficultyMap(
+            Object.fromEntries(
+              Object.entries(meta)
+                .filter(([, m]) => m.difficulty)
+                .map(([id, m]) => [id, m.difficulty])
+            )
+          );
         }
       } catch (err) {
         if (!cancelled) setError(err.message);
@@ -253,6 +291,62 @@ export default function QuizTaking() {
         }
         return next;
       });
+    }
+  }
+
+  function openFlag(questionId) {
+    setFlagError(null);
+    setFlagTarget(questionId);
+  }
+
+  async function submitFlag(reason, comment) {
+    if (flagTarget == null) return;
+    setFlagBusy(true);
+    setFlagError(null);
+    try {
+      const row = await fileFlag(flagTarget, reason, comment);
+      setFlaggedMap((prev) => ({
+        ...prev,
+        [flagTarget]: { reason: row.reason, comment: row.comment, status: row.status },
+      }));
+      setFlagTarget(null);
+    } catch (err) {
+      setFlagError(err.message);
+    } finally {
+      setFlagBusy(false);
+    }
+  }
+
+  async function withdrawMyFlag() {
+    if (flagTarget == null) return;
+    setFlagBusy(true);
+    setFlagError(null);
+    try {
+      await withdrawFlag(flagTarget);
+      setFlaggedMap((prev) => {
+        const next = { ...prev };
+        delete next[flagTarget];
+        return next;
+      });
+      setFlagTarget(null);
+    } catch (err) {
+      setFlagError(err.message);
+    } finally {
+      setFlagBusy(false);
+    }
+  }
+
+  // Optimistic difficulty change, reverting on failure - the same pattern as
+  // the star toggle. Only writes question_difficulty_tags; never attempt_answers.
+  async function changeDifficulty(questionId, next) {
+    const prev = difficultyMap[questionId] ?? null;
+    if (prev === next) return;
+    setDifficultyMap((map) => ({ ...map, [questionId]: next }));
+    try {
+      if (next === null) await removeDifficulty(questionId);
+      else await saveDifficulty(questionId, next);
+    } catch {
+      setDifficultyMap((map) => ({ ...map, [questionId]: prev }));
     }
   }
 
@@ -396,12 +490,26 @@ export default function QuizTaking() {
           <h2 className="text-lg font-semibold leading-relaxed text-ink">
             {current.question_text}
           </h2>
-          <StarIcon
-            starred={starred.has(current.id)}
-            onToggle={() => toggleStar(current.id)}
-            size={24}
-          />
+          <div className="flex shrink-0 items-center gap-1">
+            <FlagIcon
+              flagged={Boolean(flaggedMap[current.id])}
+              onToggle={() => openFlag(current.id)}
+              size={24}
+            />
+            <StarIcon
+              starred={starred.has(current.id)}
+              onToggle={() => toggleStar(current.id)}
+              size={24}
+            />
+          </div>
         </div>
+
+        <DifficultyChips
+          className="mt-3"
+          value={difficultyMap[current.id] ?? null}
+          onSet={(level) => changeDifficulty(current.id, level)}
+          onClear={() => changeDifficulty(current.id, null)}
+        />
 
         {current.image_url && (
           <img
@@ -506,11 +614,27 @@ export default function QuizTaking() {
                     ★
                   </span>
                 )}
+                {flaggedMap[q.id] && (
+                  <span
+                    className="absolute -left-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white"
+                    aria-hidden="true"
+                  />
+                )}
               </button>
             );
           })}
         </div>
       </div>
+
+      <FlagModal
+        open={flagTarget !== null}
+        existing={flagTarget != null ? flaggedMap[flagTarget] ?? null : null}
+        onClose={() => setFlagTarget(null)}
+        onSubmit={submitFlag}
+        onWithdraw={withdrawMyFlag}
+        busy={flagBusy}
+        error={flagError}
+      />
     </div>
   );
 }

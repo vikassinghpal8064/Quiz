@@ -38,6 +38,33 @@ Alternatively, if you have `psql` installed:
 psql "postgresql://user:password@ep-xxxxx.region.aws.neon.tech/dbname?sslmode=require" -f schema.sql
 ```
 
+### Migrations
+
+`schema.sql` is the starting point (step 1). Schema changes made after that live
+as ordered files in [`migrations/`](./migrations) and are applied with the runner,
+which connects using the same `DATABASE_URL`:
+
+```bash
+node scripts/migrate.mjs                        # apply every migration, in order
+node scripts/migrate.mjs 005_flags_difficulty   # apply one migration (substring match)
+```
+
+Each file is written to be re-runnable (`CREATE TABLE IF NOT EXISTS`,
+`CREATE INDEX IF NOT EXISTS`, plus an "already exists" guard in the runner), so
+running the same migration twice is harmless.
+
+The flags/difficulty feature is `migrations/005_flags_difficulty.sql`, which adds
+the `flagged_questions` and `question_difficulty_tags` tables. Check it landed
+correctly (tables, columns, indexes and foreign keys):
+
+```bash
+node scripts/check_flags_schema.mjs
+```
+
+If those two tables are missing the flag/difficulty endpoints reply with **503**
+and the hint `Flags/difficulty tables are missing. Run the migration first:
+node scripts/migrate.mjs 005_flags_difficulty`.
+
 ## 2. Set the `DATABASE_URL` environment variable
 
 The API reads the connection string from `DATABASE_URL`.

@@ -38,8 +38,7 @@ export default async function handler(req, res) {
           SELECT aa.question_id
           FROM attempt_answers aa
           JOIN quiz_attempts qa ON qa.id = aa.attempt_id
-          WHERE qa.category_id = ${catId}
-            AND qa.user_id = ${user.id}
+          WHERE qa.user_id = ${user.id}
         )
         AND id NOT IN (
           SELECT sq.question_id

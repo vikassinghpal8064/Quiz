@@ -94,6 +94,7 @@ let userA, userB, adminUser;
 let cookieA, cookieB, cookieAdmin;
 let scratchSubjectId, catId, q1, q2, q3;
 let legacySnapshot;
+let baselineCounts;
 
 function mkQuestion(cat, text) {
   return ok(questionsH, "POST", {}, {
@@ -123,6 +124,18 @@ async function createUser(name, { role } = {}) {
 }
 
 try {
+  // Snapshot the pre-run content-table counts, before this run creates its
+  // scratch subject/category/questions, so the end-of-run check can prove
+  // nothing real was destroyed rather than comparing against hardcoded
+  // numbers that drift as the production data grows.
+  baselineCounts = (await sql`
+    SELECT
+      (SELECT count(*)::int FROM subjects)   AS subjects,
+      (SELECT count(*)::int FROM categories) AS categories,
+      (SELECT count(*)::int FROM questions)  AS questions,
+      (SELECT count(*)::int FROM options)    AS options
+  `)[0];
+
   // ============================================================ 10a
   section("CHECK 10a: registration + duplicate rejection");
   const phoneA = phone();
@@ -486,16 +499,35 @@ try {
   await sql`DELETE FROM quiz_attempts WHERE id = ${tempAttempt.id}`;
   await sql`DELETE FROM starred_questions WHERE question_id = ${q2.id} AND user_id IS NULL`;
 
-  // Content tables must be exactly as they were.
-  const counts = await sql`
+  // Content tables must be exactly as they were before this run started. The
+  // scratch subject created above still exists at this point (it is deleted in
+  // the finally block), so exclude its whole tree and compare against the
+  // snapshot taken at the start of the run. This stays correct as the real
+  // data grows, instead of comparing against hardcoded totals that drift.
+  const counts = (await sql`
     SELECT
-      (SELECT count(*)::int FROM subjects)   AS subjects,
-      (SELECT count(*)::int FROM categories) AS categories,
-      (SELECT count(*)::int FROM questions)  AS questions,
-      (SELECT count(*)::int FROM options)    AS options
-  `;
-  check(`subjects/categories/questions/options intact (${counts[0].subjects}/${counts[0].categories}/${counts[0].questions}/${counts[0].options})`,
-    counts[0].subjects === 4 && counts[0].categories === 25 && counts[0].questions === 2582 && counts[0].options === 10340);
+      (SELECT count(*)::int FROM subjects
+         WHERE id <> ${scratchSubjectId})                        AS subjects,
+      (SELECT count(*)::int FROM categories
+         WHERE subject_id <> ${scratchSubjectId})                AS categories,
+      (SELECT count(*)::int FROM questions q
+         JOIN categories c ON c.id = q.category_id
+         WHERE c.subject_id <> ${scratchSubjectId})              AS questions,
+      (SELECT count(*)::int FROM options o
+         JOIN questions q ON q.id = o.question_id
+         JOIN categories c ON c.id = q.category_id
+         WHERE c.subject_id <> ${scratchSubjectId})              AS options
+  `)[0];
+  check(
+    `subjects/categories/questions/options intact (` +
+      `${counts.subjects}/${counts.categories}/${counts.questions}/${counts.options} ` +
+      `vs baseline ${baselineCounts.subjects}/${baselineCounts.categories}/` +
+      `${baselineCounts.questions}/${baselineCounts.options})`,
+    counts.subjects === baselineCounts.subjects &&
+      counts.categories === baselineCounts.categories &&
+      counts.questions === baselineCounts.questions &&
+      counts.options === baselineCounts.options
+  );
 } catch (err) {
   fail++;
   failures.push(`EXCEPTION: ${err.message}`);

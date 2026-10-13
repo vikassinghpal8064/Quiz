@@ -33,12 +33,10 @@ export default async function handler(req, res) {
           aa.attempt_id,
           aa.is_correct
         FROM attempt_answers aa
-        JOIN questions q ON q.id = aa.question_id
+        JOIN questions q       ON q.id  = aa.question_id
+        JOIN quiz_attempts qa  ON qa.id = aa.attempt_id
         WHERE q.category_id = ${catId}
-          AND aa.attempt_id IN (
-            SELECT id FROM quiz_attempts
-            WHERE category_id = ${catId} AND user_id = ${user.id}
-          )
+          AND qa.user_id = ${user.id}
         ORDER BY aa.question_id, aa.attempt_id, aa.id DESC
       )
       SELECT

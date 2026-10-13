@@ -31,7 +31,14 @@ import starredQuestions from "../_categories/[id]/starred-questions.js";
 import wrongQuestions from "../_categories/[id]/wrong-questions.js";
 import questions from "../_questions/index.js";
 import questionById from "../_questions/[id]/index.js";
+import questionMeta from "../_questions/meta.js";
 import starQuestion from "../_questions/[id]/star.js";
+import flagQuestion from "../_questions/[id]/flag.js";
+import difficultyQuestion from "../_questions/[id]/difficulty.js";
+import adminQuestions from "../_admin/questions.js";
+import adminQuestionFlags from "../_admin/questions/[id]/flags.js";
+import moveQuestions from "../_admin/questions/move.js";
+import adminFlagById from "../_admin/flags/[id].js";
 import attempts from "../_attempts/index.js";
 import attemptAnswers from "../_attempts/[id]/answers.js";
 import attemptFinish from "../_attempts/[id]/finish.js";
@@ -58,8 +65,18 @@ const ROUTES = [
   { path: "/categories/:id/wrong-questions", handler: wrongQuestions },
 
   { path: "/questions", handler: questions },
+  // /questions/meta must precede /questions/:id - both match two segments and
+  // the router takes the first hit, so "meta" would otherwise be read as an id.
+  { path: "/questions/meta", handler: questionMeta },
   { path: "/questions/:id", handler: questionById },
   { path: "/questions/:id/star", handler: starQuestion },
+  { path: "/questions/:id/flag", handler: flagQuestion },
+  { path: "/questions/:id/difficulty", handler: difficultyQuestion },
+
+  { path: "/admin/questions", handler: adminQuestions },
+  { path: "/admin/questions/move", handler: moveQuestions },
+  { path: "/admin/questions/:id/flags", handler: adminQuestionFlags },
+  { path: "/admin/flags/:id", handler: adminFlagById },
 
   { path: "/attempts", handler: attempts },
   { path: "/attempts/:id/answers", handler: attemptAnswers },
