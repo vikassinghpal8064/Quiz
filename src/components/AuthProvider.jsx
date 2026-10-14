@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "../lib/authContext";
+import { clearCache } from "../lib/apiCache";
 
 async function readError(res, fallback) {
   const body = await res.json().catch(() => null);
@@ -48,6 +49,9 @@ export default function AuthProvider({ children }) {
     }
 
     const data = await res.json();
+    // A different account means the cached reads (stars, difficulty, wrong
+    // lists) belong to someone else now.
+    clearCache();
     setUser(data);
     return data;
   }, []);
@@ -77,6 +81,7 @@ export default function AuthProvider({ children }) {
         credentials: "same-origin",
       });
     } finally {
+      clearCache();
       setUser(null);
     }
   }, []);

@@ -15,6 +15,7 @@ import {
   setDifficulty as saveDifficulty,
   clearDifficulty as removeDifficulty,
 } from "../lib/questionMeta";
+import { cachedFetch } from "../lib/apiCache";
 
 function formatTime(startedAt, finishedAt) {
   if (!startedAt || !finishedAt) return null;
@@ -59,7 +60,7 @@ export default function Results() {
 
     async function load() {
       try {
-        const res = await fetch(`/api/attempts/${attemptId}/results`);
+        const res = await cachedFetch(`/api/attempts/${attemptId}/results`);
         if (!res.ok) {
           if (res.status === 404) throw new Error("Attempt not found");
           throw new Error("Failed to load results");
@@ -70,10 +71,10 @@ export default function Results() {
         let starredIds = new Set();
         if (body.attempt?.category_id) {
           const [statsRes, starredRes] = await Promise.all([
-            fetch(
+            cachedFetch(
               `/api/categories/${body.attempt.category_id}/question-stats?excludeAttemptId=${attemptId}`
             ).catch(() => null),
-            fetch(
+            cachedFetch(
               `/api/categories/${body.attempt.category_id}/starred-questions`
             ).catch(() => null),
           ]);
@@ -147,7 +148,7 @@ export default function Results() {
     });
 
     try {
-      const res = await fetch(`/api/questions/${questionId}/star`, {
+      const res = await cachedFetch(`/api/questions/${questionId}/star`, {
         method: wasStarred ? "DELETE" : "POST",
       });
       if (!res.ok) throw new Error("Failed to update star");
@@ -223,7 +224,7 @@ export default function Results() {
     if (!data?.attempt) return;
     setRetaking(true);
     try {
-      const res = await fetch("/api/attempts", {
+      const res = await cachedFetch("/api/attempts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

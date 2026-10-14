@@ -14,6 +14,7 @@ import {
   setDifficulty as saveDifficulty,
   clearDifficulty as removeDifficulty,
 } from "../lib/questionMeta";
+import { cachedFetch } from "../lib/apiCache";
 
 function formatTime(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -74,7 +75,7 @@ export default function QuizTaking() {
 
     async function load() {
       try {
-        const starredRes = await fetch(
+        const starredRes = await cachedFetch(
           `/api/categories/${categoryId}/starred-questions`
         ).catch(() => null);
         let starredData = null;
@@ -90,7 +91,7 @@ export default function QuizTaking() {
 
         let data;
         if (mode === "wrong_only") {
-          const wrongRes = await fetch(
+          const wrongRes = await cachedFetch(
             `/api/categories/${categoryId}/wrong-questions`
           );
           if (!wrongRes.ok) throw new Error("Failed to load wrong questions");
@@ -105,7 +106,7 @@ export default function QuizTaking() {
           }
 
           const ids = wrong.map((w) => w.question_id);
-          const res = await fetch(`/api/questions?questionIds=${ids.join(",")}`);
+          const res = await cachedFetch(`/api/questions?questionIds=${ids.join(",")}`);
           if (!res.ok) throw new Error("Failed to load questions");
           data = await res.json();
 
@@ -125,7 +126,7 @@ export default function QuizTaking() {
           }
 
           const ids = [...starredIds];
-          const res = await fetch(`/api/questions?questionIds=${ids.join(",")}`);
+          const res = await cachedFetch(`/api/questions?questionIds=${ids.join(",")}`);
           if (!res.ok) throw new Error("Failed to load questions");
           data = await res.json();
 
@@ -141,7 +142,7 @@ export default function QuizTaking() {
               (orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER)
           );
         } else if (mode === "new_only") {
-          const newRes = await fetch(
+          const newRes = await cachedFetch(
             `/api/categories/${categoryId}/new-questions`
           );
           if (!newRes.ok) throw new Error("Failed to load new questions");
@@ -158,8 +159,8 @@ export default function QuizTaking() {
           }
         } else {
           const [res, statsRes] = await Promise.all([
-            fetch(`/api/questions?categoryId=${categoryId}`),
-            fetch(`/api/categories/${categoryId}/question-stats`),
+            cachedFetch(`/api/questions?categoryId=${categoryId}`),
+            cachedFetch(`/api/categories/${categoryId}/question-stats`),
           ]);
 
           if (!res.ok) throw new Error("Failed to load questions");
@@ -248,7 +249,7 @@ export default function QuizTaking() {
     setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
     setSaving(true);
     try {
-      const res = await fetch(`/api/attempts/${attemptId}/answers`, {
+      const res = await cachedFetch(`/api/attempts/${attemptId}/answers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -277,7 +278,7 @@ export default function QuizTaking() {
     });
 
     try {
-      const res = await fetch(`/api/questions/${questionId}/star`, {
+      const res = await cachedFetch(`/api/questions/${questionId}/star`, {
         method: wasStarred ? "DELETE" : "POST",
       });
       if (!res.ok) throw new Error("Failed to update star");
@@ -358,7 +359,7 @@ export default function QuizTaking() {
     submittedRef.current = true;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/attempts/${attemptId}/finish`, {
+      const res = await cachedFetch(`/api/attempts/${attemptId}/finish`, {
         method: "POST",
       });
       if (!res.ok) {

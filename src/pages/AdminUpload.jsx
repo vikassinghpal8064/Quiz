@@ -5,6 +5,7 @@ import AddSubjectModal from "../components/AddSubjectModal";
 import AddCategoryModal from "../components/AddCategoryModal";
 import Toast from "../components/Toast";
 import { parseQuestionsCsv } from "../lib/csv";
+import { cachedFetch } from "../lib/apiCache";
 
 
 
@@ -62,7 +63,7 @@ export default function AdminUpload() {
 
     async function load() {
       try {
-        const res = await fetch("/api/subjects");
+        const res = await cachedFetch("/api/subjects");
         if (!res.ok) throw new Error("Failed to load subjects");
         const data = await res.json();
         if (cancelled) return;
@@ -79,7 +80,7 @@ export default function AdminUpload() {
 
         if (scopedSubject !== "" && paramCategory) {
           const catId = Number(paramCategory);
-          const catRes = await fetch(`/api/categories?subjectId=${scopedSubject}`);
+          const catRes = await cachedFetch(`/api/categories?subjectId=${scopedSubject}`);
           if (!catRes.ok) throw new Error("Failed to load categories");
           const cats = await catRes.json();
           if (cancelled) return;
@@ -114,7 +115,7 @@ export default function AdminUpload() {
   async function loadCategories(subId) {
     setCategoriesLoading(true);
     try {
-      const res = await fetch(`/api/categories?subjectId=${subId}`);
+      const res = await cachedFetch(`/api/categories?subjectId=${subId}`);
       if (!res.ok) throw new Error("Failed to load categories");
       const data = await res.json();
       setCategories(data);
@@ -192,7 +193,7 @@ export default function AdminUpload() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("/api/questions", {
+      const res = await cachedFetch("/api/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -256,7 +257,7 @@ export default function AdminUpload() {
 
     async function sendChunk(chunk) {
       try {
-        const res = await fetch("/api/questions/bulk", {
+        const res = await cachedFetch("/api/questions/bulk", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

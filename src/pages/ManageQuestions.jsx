@@ -6,6 +6,7 @@ import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import FlagDetailsModal from "../components/FlagDetailsModal";
 import MoveQuestionsModal from "../components/MoveQuestionsModal";
 import { fetchAdminQuestions, DIFFICULTIES } from "../lib/questionMeta";
+import { cachedFetch } from "../lib/apiCache";
 
 const DIFFICULTY_BADGE = {
   easy: "bg-sage text-on-accent",
@@ -62,8 +63,8 @@ export default function ManageQuestions() {
         }
         const subId = Number(paramSubject);
         const [subRes, catRes] = await Promise.all([
-          fetch(`/api/subjects/${subId}`),
-          fetch(`/api/categories/${catId}`),
+          cachedFetch(`/api/subjects/${subId}`),
+          cachedFetch(`/api/categories/${catId}`),
         ]);
         if (!subRes.ok) throw new Error("Subject not found");
         if (!catRes.ok) throw new Error("Category not found");
@@ -157,7 +158,7 @@ export default function ManageQuestions() {
     setDeleting(true);
     setDeleteError(null);
     try {
-      const res = await fetch(`/api/questions/${deleteQuestion.id}`, {
+      const res = await cachedFetch(`/api/questions/${deleteQuestion.id}`, {
         method: "DELETE",
       });
       if (!res.ok) {

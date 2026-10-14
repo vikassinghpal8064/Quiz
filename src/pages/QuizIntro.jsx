@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import QuizTimerModal from "../components/QuizTimerModal";
 import { useAuth } from "../lib/authContext";
+import { cachedFetch } from "../lib/apiCache";
 
 function TrendBars({ attempts, label, color }) {
   if (!attempts.length) {
@@ -64,10 +65,10 @@ export default function QuizIntro() {
     async function load() {
       try {
         const [catRes, wrongRes, starredRes, newRes] = await Promise.all([
-          fetch(`/api/categories/${categoryId}`),
-          fetch(`/api/categories/${categoryId}/wrong-questions`),
-          fetch(`/api/categories/${categoryId}/starred-questions`),
-          fetch(`/api/categories/${categoryId}/new-questions`),
+          cachedFetch(`/api/categories/${categoryId}`),
+          cachedFetch(`/api/categories/${categoryId}/wrong-questions`),
+          cachedFetch(`/api/categories/${categoryId}/starred-questions`),
+          cachedFetch(`/api/categories/${categoryId}/new-questions`),
         ]);
 
         if (!catRes.ok) throw new Error("Category not found");
@@ -101,7 +102,7 @@ export default function QuizIntro() {
   async function startQuiz(mode, timerSeconds) {
     setStarting(mode);
     try {
-      const res = await fetch("/api/attempts", {
+      const res = await cachedFetch("/api/attempts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { moveQuestions } from "../lib/questionMeta";
+import { cachedFetch } from "../lib/apiCache";
 
 const overlay = { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } };
 const panel = {
@@ -38,7 +39,7 @@ export default function MoveQuestionsModal({
     setCategoryId("");
     setError(null);
     setLoadingSubjects(true);
-    fetch("/api/subjects")
+    cachedFetch("/api/subjects")
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Failed to load subjects"))))
       .then((rows) => {
         if (cancelled) return;
@@ -71,7 +72,7 @@ export default function MoveQuestionsModal({
     let cancelled = false;
     setLoadingCategories(true);
     setCategoryId("");
-    fetch(`/api/categories?subjectId=${subjectId}`)
+    cachedFetch(`/api/categories?subjectId=${subjectId}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Failed to load categories"))))
       .then((rows) => {
         if (!cancelled) setCategories(rows);

@@ -3,6 +3,10 @@
 // Kept in one place so the quiz-taking, results and manage-questions screens
 // share the exact same request and error handling. All calls rely on the
 // same-origin session cookie the rest of the app uses.
+//
+// Requests go through cachedFetch so repeated reads (e.g. the meta list) are
+// de-duplicated and reused briefly; writes clear that cache automatically.
+import { cachedFetch } from "./apiCache";
 
 export const FLAG_REASONS = [
   { value: "wrong_answer_key", label: "Wrong answer key" },
@@ -27,13 +31,13 @@ async function readError(res, fallback) {
 export async function fetchQuestionMeta(questionIds) {
   const ids = [...new Set((questionIds ?? []).map(Number).filter(Boolean))];
   if (!ids.length) return {};
-  const res = await fetch(`/api/questions/meta?questionIds=${ids.join(",")}`);
+  const res = await cachedFetch(`/api/questions/meta?questionIds=${ids.join(",")}`);
   if (!res.ok) throw new Error(await readError(res, "Failed to load question meta"));
   return res.json();
 }
 
 export async function fileFlag(questionId, reason, comment) {
-  const res = await fetch(`/api/questions/${questionId}/flag`, {
+  const res = await cachedFetch(`/api/questions/${questionId}/flag`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reason, comment }),
@@ -43,13 +47,13 @@ export async function fileFlag(questionId, reason, comment) {
 }
 
 export async function withdrawFlag(questionId) {
-  const res = await fetch(`/api/questions/${questionId}/flag`, { method: "DELETE" });
+  const res = await cachedFetch(`/api/questions/${questionId}/flag`, { method: "DELETE" });
   if (!res.ok) throw new Error(await readError(res, "Failed to withdraw flag"));
   return res.json();
 }
 
 export async function setDifficulty(questionId, difficulty) {
-  const res = await fetch(`/api/questions/${questionId}/difficulty`, {
+  const res = await cachedFetch(`/api/questions/${questionId}/difficulty`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ difficulty }),
@@ -59,7 +63,7 @@ export async function setDifficulty(questionId, difficulty) {
 }
 
 export async function clearDifficulty(questionId) {
-  const res = await fetch(`/api/questions/${questionId}/difficulty`, { method: "DELETE" });
+  const res = await cachedFetch(`/api/questions/${questionId}/difficulty`, { method: "DELETE" });
   if (!res.ok) throw new Error(await readError(res, "Failed to clear difficulty"));
   return res.json();
 }
@@ -73,19 +77,19 @@ export async function fetchAdminQuestions({ categoryId, starred, flagged, diffic
   if (flagged) params.set("flagged", "true");
   if (difficulty?.length) params.set("difficulty", difficulty.join(","));
 
-  const res = await fetch(`/api/admin/questions?${params.toString()}`);
+  const res = await cachedFetch(`/api/admin/questions?${params.toString()}`);
   if (!res.ok) throw new Error(await readError(res, "Failed to load questions"));
   return res.json();
 }
 
 export async function fetchQuestionFlags(questionId) {
-  const res = await fetch(`/api/admin/questions/${questionId}/flags`);
+  const res = await cachedFetch(`/api/admin/questions/${questionId}/flags`);
   if (!res.ok) throw new Error(await readError(res, "Failed to load flags"));
   return res.json();
 }
 
 export async function updateFlagStatus(flagId, status) {
-  const res = await fetch(`/api/admin/flags/${flagId}`, {
+  const res = await cachedFetch(`/api/admin/flags/${flagId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
@@ -95,7 +99,7 @@ export async function updateFlagStatus(flagId, status) {
 }
 
 export async function moveQuestions(questionIds, targetCategoryId) {
-  const res = await fetch("/api/admin/questions/move", {
+  const res = await cachedFetch("/api/admin/questions/move", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

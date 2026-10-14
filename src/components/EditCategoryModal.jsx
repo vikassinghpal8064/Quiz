@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { cachedFetch } from "../lib/apiCache";
 
 const overlay = {
   hidden: { opacity: 0 },
@@ -41,7 +42,7 @@ export default function EditCategoryModal({ category, onClose, onSaved }) {
     setError(null);
 
     try {
-      const res = await fetch(`/api/categories/${category.id}`, {
+      const res = await cachedFetch(`/api/categories/${category.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

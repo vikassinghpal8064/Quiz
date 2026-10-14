@@ -8,6 +8,7 @@ import EditCategoryModal from "../components/EditCategoryModal";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import EmptyState from "../components/EmptyState";
 import { useAuth } from "../lib/authContext";
+import { cachedFetch } from "../lib/apiCache";
 
 export default function CategoryList() {
   const { subjectId } = useParams();
@@ -28,8 +29,8 @@ export default function CategoryList() {
     async function load() {
       try {
         const [subjectRes, categoriesRes] = await Promise.all([
-          fetch(`/api/subjects/${subjectId}`),
-          fetch(`/api/categories?subjectId=${subjectId}`),
+          cachedFetch(`/api/subjects/${subjectId}`),
+          cachedFetch(`/api/categories?subjectId=${subjectId}`),
         ]);
 
         if (!subjectRes.ok) throw new Error("Subject not found");
@@ -75,7 +76,7 @@ export default function CategoryList() {
     setDeleting(true);
     setDeleteError(null);
     try {
-      const res = await fetch(`/api/categories/${deleteCategory.id}`, {
+      const res = await cachedFetch(`/api/categories/${deleteCategory.id}`, {
         method: "DELETE",
       });
       if (!res.ok) {

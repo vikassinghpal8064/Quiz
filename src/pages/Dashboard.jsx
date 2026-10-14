@@ -8,6 +8,7 @@ import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import EmptyState from "../components/EmptyState";
 import BackButton from "../components/BackButton";
 import { useAuth } from "../lib/authContext";
+import { cachedFetch } from "../lib/apiCache";
 
 export default function Dashboard() {
   const { isAdmin } = useAuth();
@@ -25,7 +26,7 @@ export default function Dashboard() {
 
     async function load() {
       try {
-        const res = await fetch("/api/subjects");
+        const res = await cachedFetch("/api/subjects");
         if (!res.ok) throw new Error("Failed to load subjects");
         const data = await res.json();
         if (!cancelled) setSubjects(data);
@@ -58,7 +59,7 @@ export default function Dashboard() {
     setDeleting(true);
     setDeleteError(null);
     try {
-      const res = await fetch(`/api/subjects/${deleteSubject.id}`, {
+      const res = await cachedFetch(`/api/subjects/${deleteSubject.id}`, {
         method: "DELETE",
       });
       if (!res.ok) {

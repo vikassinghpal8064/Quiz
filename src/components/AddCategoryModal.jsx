@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { cachedFetch } from "../lib/apiCache";
 
 const overlay = {
   hidden: { opacity: 0 },
@@ -30,7 +31,7 @@ export default function AddCategoryModal({ open, onClose, onCreated, subjectId }
     setError(null);
 
     try {
-      const res = await fetch("/api/categories", {
+      const res = await cachedFetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
