@@ -32,6 +32,7 @@ import wrongQuestions from "../_categories/[id]/wrong-questions.js";
 import questions from "../_questions/index.js";
 import questionById from "../_questions/[id]/index.js";
 import questionMeta from "../_questions/meta.js";
+import questionsBulk from "../_questions/bulk.js";
 import starQuestion from "../_questions/[id]/star.js";
 import flagQuestion from "../_questions/[id]/flag.js";
 import difficultyQuestion from "../_questions/[id]/difficulty.js";
@@ -65,9 +66,11 @@ const ROUTES = [
   { path: "/categories/:id/wrong-questions", handler: wrongQuestions },
 
   { path: "/questions", handler: questions },
-  // /questions/meta must precede /questions/:id - both match two segments and
-  // the router takes the first hit, so "meta" would otherwise be read as an id.
+  // /questions/meta and /questions/bulk must precede /questions/:id - all
+  // match two segments and the router takes the first hit, so "meta"/"bulk"
+  // would otherwise be read as an id.
   { path: "/questions/meta", handler: questionMeta },
+  { path: "/questions/bulk", handler: questionsBulk },
   { path: "/questions/:id", handler: questionById },
   { path: "/questions/:id/star", handler: starQuestion },
   { path: "/questions/:id/flag", handler: flagQuestion },

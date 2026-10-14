@@ -17,6 +17,12 @@ const EMPTY_FORM = {
 
 const NEW_OPTION_VALUE = "__new__";
 
+// CSV bulk import: rows are sent in chunks to POST /api/questions/bulk, with a
+// few chunks in flight at once. Keep UPLOAD_CHUNK_SIZE at or below the
+// server's MAX_BATCH_SIZE (api/_questions/bulk.js).
+const UPLOAD_CHUNK_SIZE = 100;
+const UPLOAD_CONCURRENCY = 3;
+
 const fieldClass =
   "field mt-1 block w-full px-3 py-2.5 text-sm shadow-sm disabled:opacity-60";
 
@@ -239,37 +245,59 @@ export default function AdminUpload() {
     setUploading(true);
     setUploadProgress({ done: 0, total: csvRows.length, failed: 0 });
 
+    const total = csvRows.length;
+    const chunks = [];
+    for (let i = 0; i < total; i += UPLOAD_CHUNK_SIZE) {
+      chunks.push(csvRows.slice(i, i + UPLOAD_CHUNK_SIZE));
+    }
+
+    let done = 0;
     let failed = 0;
-    for (let i = 0; i < csvRows.length; i++) {
-      const row = csvRows[i];
+
+    async function sendChunk(chunk) {
       try {
-        const res = await fetch("/api/questions", {
+        const res = await fetch("/api/questions/bulk", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             category_id: Number(categoryId),
-            question_text: row.question_text,
-            explanation: row.explanation || undefined,
-            options: row.options.map((text, j) => ({
-              option_text: text,
-              is_correct: j === row.correct_option - 1,
+            questions: chunk.map((row) => ({
+              category_id: Number(categoryId),
+              question_text: row.question_text,
+              explanation: row.explanation || null,
+              options: row.options.map((text, j) => ({
+                option_text: text,
+                is_correct: j === row.correct_option - 1,
+              })),
             })),
           }),
         });
-        if (!res.ok) failed++;
+        if (!res.ok) failed += chunk.length;
       } catch {
-        failed++;
+        failed += chunk.length;
       }
-      setUploadProgress({
-        done: i + 1,
-        total: csvRows.length,
-        failed,
-      });
+      done += chunk.length;
+      setUploadProgress({ done, total, failed });
     }
+
+    // A few chunks in flight at once: cuts wall-clock time further without
+    // firing hundreds of concurrent requests at the serverless function.
+    let nextChunk = 0;
+    async function worker() {
+      while (nextChunk < chunks.length) {
+        await sendChunk(chunks[nextChunk++]);
+      }
+    }
+    await Promise.all(
+      Array.from(
+        { length: Math.min(UPLOAD_CONCURRENCY, chunks.length) },
+        worker
+      )
+    );
 
     setUploading(false);
     addToast(
-      `Uploaded ${csvRows.length - failed}/${csvRows.length} questions` +
+      `Uploaded ${total - failed}/${total} questions` +
         (failed > 0 ? ` (${failed} failed)` : "")
     );
     setCsvFileName("");
