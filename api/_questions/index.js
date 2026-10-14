@@ -24,6 +24,9 @@ export default async function handler(req, res) {
           .json({ error: "categoryId or questionIds query param is required" });
       }
 
+      // Options are pulled back in the same statement with a correlated
+      // json_agg, so the whole list is one round trip instead of two (rows,
+      // then a second query for their options).
       let questionFilter;
       if (questionIds) {
         const ids = questionIds
@@ -36,9 +39,14 @@ export default async function handler(req, res) {
         }
 
         questionFilter = sql`
-          SELECT * FROM questions
-          WHERE id = ANY(${ids})
-          ORDER BY id
+          SELECT q.*, COALESCE(
+            (SELECT json_agg(row_to_json(o) ORDER BY o.id)
+             FROM options o WHERE o.question_id = q.id),
+            '[]'::json
+          ) AS options
+          FROM questions q
+          WHERE q.id = ANY(${ids})
+          ORDER BY q.id
         `;
       } else {
         const id = Number(categoryId);
@@ -47,9 +55,14 @@ export default async function handler(req, res) {
         }
 
         questionFilter = sql`
-          SELECT * FROM questions
-          WHERE category_id = ${id}
-          ORDER BY created_at DESC
+          SELECT q.*, COALESCE(
+            (SELECT json_agg(row_to_json(o) ORDER BY o.id)
+             FROM options o WHERE o.question_id = q.id),
+            '[]'::json
+          ) AS options
+          FROM questions q
+          WHERE q.category_id = ${id}
+          ORDER BY q.created_at DESC
         `;
       }
 
@@ -59,20 +72,9 @@ export default async function handler(req, res) {
         return res.status(200).json([]);
       }
 
-      const ids = questions.map((q) => q.id);
-      const options = await sql`
-        SELECT * FROM options
-        WHERE question_id = ANY(${ids})
-      `;
-
-      const optionsByQuestion = {};
-      for (const opt of options) {
-        (optionsByQuestion[opt.question_id] ??= []).push(opt);
-      }
-
       const result = questions.map((q) => ({
         ...q,
-        options: optionsByQuestion[q.id] ?? [],
+        options: q.options ?? [],
       }));
 
       return res.status(200).json(result);

@@ -26,28 +26,39 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "category id must be a number" });
     }
 
-    const category = await sql`SELECT id FROM categories WHERE id = ${catId}`;
+    // Category existence check and the question list are independent, so a
+    // single transaction batches them into one round trip. Options are pulled
+    // back with the rows via a correlated json_agg, which removes the third
+    // query the endpoint used to make.
+    const [category, questions] = await sql.transaction((txn) => [
+      txn`SELECT id FROM categories WHERE id = ${catId}`,
+      txn`
+        SELECT q.*, COALESCE(
+          (SELECT json_agg(row_to_json(o) ORDER BY o.id)
+           FROM options o WHERE o.question_id = q.id),
+          '[]'::json
+        ) AS options
+        FROM questions q
+        WHERE q.category_id = ${catId}
+          AND q.id NOT IN (
+            SELECT aa.question_id
+            FROM attempt_answers aa
+            JOIN quiz_attempts qa ON qa.id = aa.attempt_id
+            WHERE qa.user_id = ${user.id}
+          )
+          AND q.id NOT IN (
+            SELECT sq.question_id
+            FROM starred_questions sq
+            WHERE sq.category_id = ${catId}
+              AND sq.user_id = ${user.id}
+          )
+        ORDER BY q.id
+      `,
+    ]);
+
     if (!category.length) {
       return res.status(404).json({ error: "category not found" });
     }
-
-    const questions = await sql`
-      SELECT * FROM questions
-      WHERE category_id = ${catId}
-        AND id NOT IN (
-          SELECT aa.question_id
-          FROM attempt_answers aa
-          JOIN quiz_attempts qa ON qa.id = aa.attempt_id
-          WHERE qa.user_id = ${user.id}
-        )
-        AND id NOT IN (
-          SELECT sq.question_id
-          FROM starred_questions sq
-          WHERE sq.category_id = ${catId}
-            AND sq.user_id = ${user.id}
-        )
-      ORDER BY id
-    `;
 
     const result = {
       count: questions.length,
@@ -58,20 +69,9 @@ export default async function handler(req, res) {
       return res.status(200).json(result);
     }
 
-    const ids = questions.map((q) => q.id);
-    const options = await sql`
-      SELECT * FROM options
-      WHERE question_id = ANY(${ids})
-    `;
-
-    const optionsByQuestion = {};
-    for (const opt of options) {
-      (optionsByQuestion[opt.question_id] ??= []).push(opt);
-    }
-
     result.questions = questions.map((q) => ({
       ...q,
-      options: optionsByQuestion[q.id] ?? [],
+      options: q.options ?? [],
     }));
 
     return res.status(200).json(result);

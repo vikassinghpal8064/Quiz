@@ -44,7 +44,7 @@ async function resolve(url) {
 }
 
 const h = (p) => import(p).then((m) => m.default);
-const [subjectsH, subjectByIdH, categoriesH, categoryByIdH,
+const [subjectsH, subjectByIdH, categoriesH, categoryByIdH, summaryH,
   questionsH, questionByIdH, questionMetaH, starH, flagH, difficultyH,
   attemptsH, answersH, finishH, resultsH,
   newQ_H, wrongQ_H, starredQ_H, statsH,
@@ -54,6 +54,7 @@ const [subjectsH, subjectByIdH, categoriesH, categoryByIdH,
   h("../api/_subjects/[id].js"),
   h("../api/_categories/index.js"),
   h("../api/_categories/[id]/index.js"),
+  h("../api/_categories/[id]/summary.js"),
   h("../api/_questions/index.js"),
   h("../api/_questions/[id]/index.js"),
   h("../api/_questions/meta.js"),
@@ -87,6 +88,7 @@ const ROUTE_CASES = [
   ["/api/subjects/3", subjectByIdH, { id: "3" }],
   ["/api/categories", categoriesH, {}],
   ["/api/categories/5", categoryByIdH, { id: "5" }],
+  ["/api/categories/5/summary", summaryH, { id: "5" }],
   ["/api/categories/5/wrong-questions", wrongQ_H, { id: "5" }],
   ["/api/categories/5/new-questions", newQ_H, { id: "5" }],
   ["/api/categories/5/starred-questions", starredQ_H, { id: "5" }],
@@ -233,6 +235,7 @@ const NESTED = [
   ["subjects/3", '401 {"error":"Authentication required"}'],
   ["attempts/12/answers", '401 {"error":"Authentication required"}'],
   ["categories/5/wrong-questions", '401 {"error":"Authentication required"}'],
+  ["categories/5/summary", '401 {"error":"Authentication required"}'],
   ["questions/9/star", '401 {"error":"Authentication required"}'],
   ["questions/9/flag", '401 {"error":"Authentication required"}'],
   ["questions/9/difficulty", '401 {"error":"Authentication required"}'],

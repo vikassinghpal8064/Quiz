@@ -1,21 +1,32 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import PageTransition from "./components/PageTransition";
+import LoadingSkeleton from "./components/LoadingSkeleton";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import AccountSidebar from "./components/AccountSidebar";
 import { useAuth } from "./lib/authContext";
-import Dashboard from "./pages/Dashboard";
-import CategoryList from "./pages/CategoryList";
-import QuizIntro from "./pages/QuizIntro";
-import QuizTaking from "./pages/QuizTaking";
-import Results from "./pages/Results";
-import AdminUpload from "./pages/AdminUpload";
-import ManageQuestions from "./pages/ManageQuestions";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
+
+// Each page is its own chunk, fetched the first time its route is visited.
+// That keeps the initial download to the app shell instead of every page.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const CategoryList = lazy(() => import("./pages/CategoryList"));
+const QuizIntro = lazy(() => import("./pages/QuizIntro"));
+const QuizTaking = lazy(() => import("./pages/QuizTaking"));
+const Results = lazy(() => import("./pages/Results"));
+const AdminUpload = lazy(() => import("./pages/AdminUpload"));
+const ManageQuestions = lazy(() => import("./pages/ManageQuestions"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+
+// One Suspense boundary per page, kept inside PageTransition so the layout and
+// the exit animation around it are unaffected while a chunk loads.
+function PageChunk({ children }) {
+  return <Suspense fallback={<LoadingSkeleton />}>{children}</Suspense>;
+}
 
 export default function App() {
   const location = useLocation();
@@ -32,7 +43,9 @@ export default function App() {
             path="/login"
             element={
               <PageTransition>
-                <Login />
+                <PageChunk>
+                  <Login />
+                </PageChunk>
               </PageTransition>
             }
           />
@@ -40,7 +53,9 @@ export default function App() {
             path="/register"
             element={
               <PageTransition>
-                <Register />
+                <PageChunk>
+                  <Register />
+                </PageChunk>
               </PageTransition>
             }
           />
@@ -48,7 +63,9 @@ export default function App() {
             path="/forgot-password"
             element={
               <PageTransition>
-                <ForgotPassword />
+                <PageChunk>
+                  <ForgotPassword />
+                </PageChunk>
               </PageTransition>
             }
           />
@@ -56,7 +73,9 @@ export default function App() {
             path="/reset-password/:token"
             element={
               <PageTransition>
-                <ResetPassword />
+                <PageChunk>
+                  <ResetPassword />
+                </PageChunk>
               </PageTransition>
             }
           />
@@ -67,7 +86,9 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <PageTransition>
-                  <Dashboard />
+                  <PageChunk>
+                    <Dashboard />
+                  </PageChunk>
                 </PageTransition>
               </ProtectedRoute>
             }
@@ -77,7 +98,9 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <PageTransition>
-                  <CategoryList />
+                  <PageChunk>
+                    <CategoryList />
+                  </PageChunk>
                 </PageTransition>
               </ProtectedRoute>
             }
@@ -87,7 +110,9 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <PageTransition>
-                  <QuizIntro />
+                  <PageChunk>
+                    <QuizIntro />
+                  </PageChunk>
                 </PageTransition>
               </ProtectedRoute>
             }
@@ -97,7 +122,9 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <PageTransition>
-                  <QuizTaking />
+                  <PageChunk>
+                    <QuizTaking />
+                  </PageChunk>
                 </PageTransition>
               </ProtectedRoute>
             }
@@ -107,7 +134,9 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <PageTransition>
-                  <Results />
+                  <PageChunk>
+                    <Results />
+                  </PageChunk>
                 </PageTransition>
               </ProtectedRoute>
             }
@@ -119,7 +148,9 @@ export default function App() {
             element={
               <AdminRoute>
                 <PageTransition>
-                  <AdminUpload />
+                  <PageChunk>
+                    <AdminUpload />
+                  </PageChunk>
                 </PageTransition>
               </AdminRoute>
             }
@@ -129,7 +160,9 @@ export default function App() {
             element={
               <AdminRoute>
                 <PageTransition>
-                  <ManageQuestions />
+                  <PageChunk>
+                    <ManageQuestions />
+                  </PageChunk>
                 </PageTransition>
               </AdminRoute>
             }

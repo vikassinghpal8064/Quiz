@@ -41,7 +41,32 @@ function mockOk() {
   };
 }
 
-console.log("TTL CACHE");
+console.log("BROWSER-CACHE SAFETY");
+{
+  // Runs first, before any test performs a write: preferFresh must start off,
+  // then turn on after a successful write so fetch() revalidates instead of
+  // trusting the browser's own Cache-Control copy.
+  let lastInit = null;
+  globalThis.fetch = async (url, init) => {
+    lastInit = init;
+    return new Response(JSON.stringify({ url }), { status: 200 });
+  };
+  await (await cachedFetch("/api/subjects")).json();
+  check(
+    "a read before any write may use the browser cache",
+    lastInit?.cache === undefined,
+    `cache=${lastInit?.cache}`
+  );
+  await cachedFetch("/api/questions", { method: "POST", body: "{}" });
+  await (await cachedFetch("/api/subjects")).json();
+  check(
+    "a read after a write revalidates the browser cache",
+    lastInit?.cache === "no-cache",
+    `cache=${lastInit?.cache}`
+  );
+}
+
+console.log("\nTTL CACHE");
 {
   clearCache();
   calls = [];

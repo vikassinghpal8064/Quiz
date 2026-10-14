@@ -85,39 +85,43 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const rows = await sql`
-      SELECT c.*, count(q.id)::int AS question_count
-      FROM categories c
-      LEFT JOIN questions q ON q.category_id = c.id
-      WHERE c.id = ${catId}
-      GROUP BY c.id
-    `;
+    // One round trip instead of three. The category row, the caller's
+    // aggregate stats and their recent attempts are independent reads, so
+    // sql.transaction() batches them into a single HTTP request to Neon.
+    // Attempt history is private: both attempt queries are scoped to the
+    // caller so one user can never see another user's scores, modes or
+    // timings.
+    const [rows, stats, recentAttempts] = await sql.transaction((txn) => [
+      txn`
+        SELECT c.*, count(q.id)::int AS question_count
+        FROM categories c
+        LEFT JOIN questions q ON q.category_id = c.id
+        WHERE c.id = ${catId}
+        GROUP BY c.id
+      `,
+      txn`
+        SELECT
+          count(*)::int AS attempt_count,
+          max(score)::int AS best_score
+        FROM quiz_attempts
+        WHERE category_id = ${catId}
+          AND finished_at IS NOT NULL
+          AND user_id = ${user.id}
+      `,
+      txn`
+        SELECT id, mode, score, total_questions, finished_at
+        FROM quiz_attempts
+        WHERE category_id = ${catId}
+          AND finished_at IS NOT NULL
+          AND user_id = ${user.id}
+        ORDER BY finished_at DESC
+        LIMIT 10
+      `,
+    ]);
 
     if (!rows.length) {
       return res.status(404).json({ error: "category not found" });
     }
-
-    // Attempt history is private: scope these to the caller so one
-    // user can never see another user's scores, modes or timings.
-    const stats = await sql`
-      SELECT
-        count(*)::int AS attempt_count,
-        max(score)::int AS best_score
-      FROM quiz_attempts
-      WHERE category_id = ${catId}
-        AND finished_at IS NOT NULL
-        AND user_id = ${user.id}
-    `;
-
-    const recentAttempts = await sql`
-      SELECT id, mode, score, total_questions, finished_at
-      FROM quiz_attempts
-      WHERE category_id = ${catId}
-        AND finished_at IS NOT NULL
-        AND user_id = ${user.id}
-      ORDER BY finished_at DESC
-      LIMIT 10
-    `;
 
     return res.status(200).json({
       ...rows[0],

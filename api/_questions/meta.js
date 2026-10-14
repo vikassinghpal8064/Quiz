@@ -45,17 +45,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "questionIds must be numbers" });
     }
 
-    const flags = await sql`
-      SELECT question_id, reason, comment, status
-      FROM flagged_questions
-      WHERE user_id = ${user.id} AND question_id = ANY(${ids})
-    `;
-
-    const tags = await sql`
-      SELECT question_id, difficulty
-      FROM question_difficulty_tags
-      WHERE user_id = ${user.id} AND question_id = ANY(${ids})
-    `;
+    // Flags and difficulty tags are independent reads, so one transaction
+    // batches them into a single round trip.
+    const [flags, tags] = await sql.transaction((txn) => [
+      txn`
+        SELECT question_id, reason, comment, status
+        FROM flagged_questions
+        WHERE user_id = ${user.id} AND question_id = ANY(${ids})
+      `,
+      txn`
+        SELECT question_id, difficulty
+        FROM question_difficulty_tags
+        WHERE user_id = ${user.id} AND question_id = ANY(${ids})
+      `,
+    ]);
 
     const flagsById = new Map(flags.map((f) => [Number(f.question_id), f]));
     const tagsById = new Map(tags.map((t) => [Number(t.question_id), t.difficulty]));

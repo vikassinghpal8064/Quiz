@@ -92,7 +92,12 @@ export default async function handler(req, res) {
       `SELECT q.*,
               (sq.question_id IS NOT NULL)                AS is_starred,
               dt.difficulty                               AS my_difficulty,
-              COALESCE(fc.flag_count, 0)::int             AS flag_count
+              COALESCE(fc.flag_count, 0)::int             AS flag_count,
+              COALESCE(
+                (SELECT json_agg(row_to_json(o) ORDER BY o.id)
+                 FROM options o WHERE o.question_id = q.id),
+                '[]'::json
+              )                                           AS options
        FROM questions q
        LEFT JOIN starred_questions sq
               ON sq.question_id = q.id AND sq.user_id = $1
@@ -109,26 +114,15 @@ export default async function handler(req, res) {
       params
     );
 
-    if (!rows.length) {
-      return res.status(200).json([]);
-    }
-
-    const ids = rows.map((q) => q.id);
-    const options = await sql`
-      SELECT * FROM options WHERE question_id = ANY(${ids}) ORDER BY id
-    `;
-    const optionsByQuestion = {};
-    for (const opt of options) {
-      (optionsByQuestion[opt.question_id] ??= []).push(opt);
-    }
-
+    // Options ride along in the same query above (correlated json_agg), so
+    // the list is one round trip instead of two.
     return res.status(200).json(
       rows.map((q) => ({
         ...q,
         is_starred: Boolean(q.is_starred),
         my_difficulty: q.my_difficulty ?? null,
         flag_count: Number(q.flag_count) || 0,
-        options: optionsByQuestion[q.id] ?? [],
+        options: q.options ?? [],
       }))
     );
   } catch (err) {

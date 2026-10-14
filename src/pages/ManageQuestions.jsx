@@ -83,11 +83,14 @@ export default function ManageQuestions() {
   }, [paramSubject, paramCategory, catId]);
 
   // Question list - refetched whenever a filter or an edit/move/delete changes.
+  // Debounced so rapidly toggling filters fires one request instead of one per
+  // click; the pending timer is cleared on unmount or when the deps change.
   useEffect(() => {
+    if (!paramCategory || !paramSubject) return;
     let cancelled = false;
-    async function loadQuestions() {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
+    const timer = setTimeout(async () => {
       try {
         const rows = await fetchAdminQuestions({
           categoryId: catId,
@@ -104,10 +107,10 @@ export default function ManageQuestions() {
       } finally {
         if (!cancelled) setLoading(false);
       }
-    }
-    if (paramCategory && paramSubject) loadQuestions();
+    }, 250);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catId, paramSubject, paramCategory, starredFilter, flaggedFilter, difficultyKey, refreshKey]);
@@ -353,7 +356,7 @@ export default function ManageQuestions() {
           {questions.map((q) => (
             <div
               key={q.id}
-              className="rounded-2xl border border-ink/10 bg-white p-5 shadow-card"
+              className="virtual-row rounded-2xl border border-ink/10 bg-white p-5 shadow-card"
             >
               <div className="flex items-start gap-3">
                 <input

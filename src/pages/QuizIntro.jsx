@@ -51,7 +51,7 @@ export default function QuizIntro() {
   const { isAdmin } = useAuth();
 
   const [category, setCategory] = useState(null);
-  const [wrongQuestions, setWrongQuestions] = useState([]);
+  const [wrongCount, setWrongCount] = useState(0);
   const [starredCount, setStarredCount] = useState(0);
   const [newQuestionsCount, setNewQuestionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -64,28 +64,20 @@ export default function QuizIntro() {
 
     async function load() {
       try {
-        const [catRes, wrongRes, starredRes, newRes] = await Promise.all([
-          cachedFetch(`/api/categories/${categoryId}`),
-          cachedFetch(`/api/categories/${categoryId}/wrong-questions`),
-          cachedFetch(`/api/categories/${categoryId}/starred-questions`),
-          cachedFetch(`/api/categories/${categoryId}/new-questions`),
-        ]);
-
-        if (!catRes.ok) throw new Error("Category not found");
-        if (!wrongRes.ok) throw new Error("Failed to load wrong questions");
-
-        const [catData, wrongData, starredData, newData] = await Promise.all([
-          catRes.json(),
-          wrongRes.json(),
-          starredRes.ok ? starredRes.json() : null,
-          newRes.ok ? newRes.json() : null,
-        ]);
+        // One aggregate call replaces the category + wrong + starred + new
+        // requests this screen used to make on mount.
+        const res = await cachedFetch(`/api/categories/${categoryId}/summary`);
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.error ?? "Failed to load category");
+        }
+        const data = await res.json();
 
         if (cancelled) return;
-        setCategory(catData);
-        setWrongQuestions(wrongData);
-        setStarredCount(starredData?.count ?? 0);
-        setNewQuestionsCount(newData?.count ?? 0);
+        setCategory(data);
+        setWrongCount(data.wrong_count ?? 0);
+        setStarredCount(data.starred_count ?? 0);
+        setNewQuestionsCount(data.new_count ?? 0);
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -134,8 +126,6 @@ export default function QuizIntro() {
     setTimerForMode(null);
     startQuiz(mode, timerSeconds);
   }
-
-  const wrongCount = wrongQuestions.length;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">

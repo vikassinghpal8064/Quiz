@@ -22,6 +22,31 @@ const DEFAULT_TTL = 30_000;
 // url -> { promise } while in flight, or { response, time } once settled.
 const store = new Map();
 
+// The API sets Cache-Control: private, max-age=15, so the browser keeps its
+// own copy of reads too. That copy cannot be cleared from JS, and it would
+// otherwise outlive a write (e.g. moving questions, then refetching the list).
+// Once any write has succeeded we ask fetch() to revalidate instead of
+// trusting the browser cache. The marker lives in sessionStorage so a reload
+// after a write behaves the same; reads still hit the in-memory cache above,
+// so navigation stays instant.
+const FRESH_MARKER = "quiz.apiCache.preferFresh";
+let preferFresh = (() => {
+  try {
+    return sessionStorage.getItem(FRESH_MARKER) === "1";
+  } catch {
+    return false;
+  }
+})();
+
+function markPreferFresh() {
+  preferFresh = true;
+  try {
+    sessionStorage.setItem(FRESH_MARKER, "1");
+  } catch {
+    /* no sessionStorage (tests/SSR) - the in-memory flag still applies */
+  }
+}
+
 function keyOf(input) {
   return typeof input === "string" ? input : input.url;
 }
@@ -54,12 +79,18 @@ export function cachedFetch(input, init = {}) {
   // the cache; a failed write changed nothing, so leave it alone.
   if (method !== "GET") {
     return fetch(input, init).then((res) => {
-      if (res.ok) invalidateCache();
+      if (res.ok) {
+        invalidateCache();
+        markPreferFresh();
+      }
       return res;
     });
   }
 
   const { cacheTtl = DEFAULT_TTL, ...requestInit } = init;
+  if (preferFresh && requestInit.cache === undefined) {
+    requestInit.cache = "no-cache";
+  }
   const key = keyOf(input);
   const entry = store.get(key);
 

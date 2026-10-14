@@ -42,9 +42,22 @@ function segmentsFrom(req) {
 }
 
 export default async function dispatch(req, res) {
-  const match = resolveRoute(segmentsFrom(req));
+  const segments = segmentsFrom(req);
+  const match = resolveRoute(segments);
   if (!match) {
     return res.status(404).json({ error: "Not found" });
+  }
+
+  // HTTP cache policy, applied in one place so every endpoint behaves the
+  // same. Read endpoints are per-user (session cookie) and change on writes,
+  // so they are marked private and reused by the browser for a short window;
+  // Vary: Cookie keeps one user's cached body from being served to another.
+  // Everything else - writes and all auth endpoints - must never be cached.
+  if (req.method === "GET" && segments[0] !== "auth") {
+    res.setHeader("Cache-Control", "private, max-age=15");
+    res.setHeader("Vary", "Cookie");
+  } else {
+    res.setHeader("Cache-Control", "no-store");
   }
 
   // Captured segments become query parameters, so handlers keep reading

@@ -50,23 +50,18 @@ export default async function handler(req, res) {
 
     const ids = starred.map((r) => r.question_id);
     const questions = await sql`
-      SELECT * FROM questions
-      WHERE id = ANY(${ids})
+      SELECT q.*, COALESCE(
+        (SELECT json_agg(row_to_json(o) ORDER BY o.id)
+         FROM options o WHERE o.question_id = q.id),
+        '[]'::json
+      ) AS options
+      FROM questions q
+      WHERE q.id = ANY(${ids})
     `;
-
-    const options = await sql`
-      SELECT * FROM options
-      WHERE question_id = ANY(${ids})
-    `;
-
-    const optionsByQuestion = {};
-    for (const opt of options) {
-      (optionsByQuestion[opt.question_id] ??= []).push(opt);
-    }
 
     result.questions = questions.map((q) => ({
       ...q,
-      options: optionsByQuestion[q.id] ?? [],
+      options: q.options ?? [],
     }));
 
     return res.status(200).json(result);

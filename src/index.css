@@ -1145,3 +1145,16 @@ html.dark #theme-toggle .icon-moon {
     transform: none;
   }
 }
+
+/* ============================================================
+   Long lists
+   Render virtualization for the admin question list. The browser
+   skips layout and paint for cards scrolled out of view and uses
+   the intrinsic-size hint so the scrollbar stays stable. This is
+   progressive enhancement: browsers without content-visibility
+   simply render every row as before.
+   ============================================================ */
+.virtual-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 340px;
+}

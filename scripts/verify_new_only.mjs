@@ -5,7 +5,7 @@ const h = (p) => import(p).then((m) => m.default);
 const [subjectsHandler, categoriesHandler, questionsHandler,
   attemptsHandler, answersHandler, finishHandler,
   newQuestionsHandler, wrongQuestionsHandler, starredQuestionsHandler,
-  questionStatsHandler, starHandler] = await Promise.all([
+  questionStatsHandler, starHandler, categoryByIdHandler, summaryHandler] = await Promise.all([
   h("../api/_subjects/index.js"),
   h("../api/_categories/index.js"),
   h("../api/_questions/index.js"),
@@ -17,6 +17,8 @@ const [subjectsHandler, categoriesHandler, questionsHandler,
   h("../api/_categories/[id]/starred-questions.js"),
   h("../api/_categories/[id]/question-stats.js"),
   h("../api/_questions/[id]/star.js"),
+  h("../api/_categories/[id]/index.js"),
+  h("../api/_categories/[id]/summary.js"),
 ]);
 
 // Every endpoint requires a session now. Loaded dynamically so the API
@@ -269,6 +271,29 @@ try {
     check(
       `cat ${cid}: exactly one correct option per returned question`,
       got.questions.every((q) => q.options.filter((o) => o.is_correct).length === 1)
+    );
+
+    // The intro screen's aggregate must agree with the individual endpoints it
+    // replaces, and with GET /categories/:id for the shared fields.
+    const wrong = await call(wrongQuestionsHandler, "GET", { id: cid }, {});
+    const catFull = await call(categoryByIdHandler, "GET", { id: cid }, {});
+    const summary = await call(summaryHandler, "GET", { id: cid }, {});
+    check(
+      `cat ${cid}: summary counts match new/starred/wrong endpoints`,
+      summary.new_count === got.count &&
+        summary.starred_count === sq.count &&
+        summary.wrong_count === wrong.length
+    );
+    check(
+      `cat ${cid}: summary category fields match GET /categories/:id`,
+      summary.id === catFull.id &&
+        summary.name === catFull.name &&
+        summary.description === catFull.description &&
+        summary.subject_id === catFull.subject_id &&
+        summary.question_count === catFull.question_count &&
+        summary.attempt_count === catFull.attempt_count &&
+        summary.best_score === catFull.best_score &&
+        JSON.stringify(summary.recent_attempts) === JSON.stringify(catFull.recent_attempts)
     );
   }
 

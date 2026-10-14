@@ -25,6 +25,7 @@ import subjects from "../_subjects/index.js";
 import subjectById from "../_subjects/[id].js";
 import categories from "../_categories/index.js";
 import categoryById from "../_categories/[id]/index.js";
+import categorySummary from "../_categories/[id]/summary.js";
 import newQuestions from "../_categories/[id]/new-questions.js";
 import questionStats from "../_categories/[id]/question-stats.js";
 import starredQuestions from "../_categories/[id]/starred-questions.js";
@@ -60,6 +61,7 @@ const ROUTES = [
 
   { path: "/categories", handler: categories },
   { path: "/categories/:id", handler: categoryById },
+  { path: "/categories/:id/summary", handler: categorySummary },
   { path: "/categories/:id/new-questions", handler: newQuestions },
   { path: "/categories/:id/question-stats", handler: questionStats },
   { path: "/categories/:id/starred-questions", handler: starredQuestions },
