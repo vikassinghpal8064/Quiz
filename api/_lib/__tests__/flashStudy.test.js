@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
+  candidateQuery,
   cardStateFromRow,
   focusLimit,
+  newCapRemaining,
+  orderQueue,
   rollingAverage,
   settingsFromRows,
   summarizeRatings,
@@ -137,5 +140,73 @@ describe("cardStateFromRow", () => {
   it("back-fills a missing state row into the scheduler shape", () => {
     const state = cardStateFromRow(null);
     expect(state).toMatchObject({ state: 0, reps: 0, lapses: 0, stability: 0, difficulty: 0 });
+  });
+});
+
+describe("candidateQuery", () => {
+  it("scopes a tag with an array-containment filter", () => {
+    const query = candidateQuery({ uid: "u", scopeType: "tag", tag: "grammar", mode: "due" });
+    expect(query.text).toContain("c.tags @> ARRAY[$2]::text[]");
+    expect(query.params).toEqual(["u", "grammar"]);
+  });
+
+  it("scopes a folder to its categories", () => {
+    const query = candidateQuery({ uid: "u", scopeType: "folder", scopeId: 7, mode: "due" });
+    expect(query.text).toContain("folder_id = $2");
+    expect(query.params).toEqual(["u", 7]);
+  });
+});
+
+describe("newCapRemaining", () => {
+  it("subtracts what has already been introduced today", () => {
+    expect(newCapRemaining({ new_cards_per_day: 20 }, 5)).toBe(15);
+    expect(newCapRemaining({ new_cards_per_day: 20 }, 25)).toBe(0);
+    expect(newCapRemaining({}, 3)).toBe(DEFAULT_SETTINGS.new_cards_per_day - 3);
+    expect(newCapRemaining({ new_cards_per_day: 0 }, 0)).toBe(0);
+  });
+});
+
+describe("orderQueue", () => {
+  const now = new Date("2026-03-01T00:00:00.000Z");
+  const dayMs = 86_400_000;
+
+  const reviewed = (id, daysAgo, stability = 5) => ({
+    id,
+    state: 2,
+    due: new Date(now.getTime() - 1000).toISOString(),
+    stability,
+    difficulty: 5,
+    reps: 3,
+    lapses: 0,
+    last_review: new Date(now.getTime() - daysAgo * dayMs).toISOString(),
+  });
+  const fresh = (id) => ({
+    id,
+    state: 0,
+    due: now.toISOString(),
+    stability: 0,
+    difficulty: 0,
+    reps: 0,
+    lapses: 0,
+    last_review: null,
+  });
+
+  it("puts the least-retrievable due card first, then new cards", () => {
+    const ids = orderQueue([reviewed(1, 1), fresh(9), reviewed(2, 30)], { mode: "due", now });
+    expect(ids[0]).toBe(2); // 30 days since review -> lowest retrievability
+    expect(ids[ids.length - 1]).toBe(9); // new card is appended last
+  });
+
+  it("caps the new-card tail at newCap", () => {
+    const ids = orderQueue([reviewed(1, 5), fresh(2), fresh(3), fresh(4)], {
+      mode: "due",
+      now,
+      newCap: 1,
+    });
+    expect(ids).toEqual([1, 2]);
+  });
+
+  it("keeps the SQL order for other modes", () => {
+    expect(orderQueue([fresh(3), reviewed(1, 1)], { mode: "all", now })).toEqual([3, 1]);
   });
 });

@@ -67,6 +67,7 @@ import flashSessions from "../_flash/sessions/index.js";
 import flashSessionById from "../_flash/sessions/[id].js";
 import flashSessionReview from "../_flash/sessions/[id]/review.js";
 import flashSessionFinish from "../_flash/sessions/[id]/finish.js";
+import flashReviews from "../_flash/reviews/index.js";
 
 // Order matters only in that a more specific path must precede a shorter one
 // sharing its prefix. Nothing here is a prefix of another row, so the order is
@@ -131,6 +132,8 @@ const ROUTES = [
   { path: "/flash/sessions/:id/review", handler: flashSessionReview },
   { path: "/flash/sessions/:id/finish", handler: flashSessionFinish },
   { path: "/flash/sessions/:id", handler: flashSessionById },
+  // The flat review endpoint (session id in the body).
+  { path: "/flash/reviews", handler: flashReviews },
 ];
 
 const COMPILED = ROUTES.map((route) => ({

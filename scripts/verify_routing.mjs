@@ -49,7 +49,7 @@ const [subjectsH, subjectByIdH, categoriesH, categoryByIdH, summaryH,
   attemptsH, answersH, finishH, resultsH,
   newQ_H, wrongQ_H, starredQ_H, statsH,
   adminQuestionsH, adminQuestionFlagsH, moveQuestionsH, adminFlagByIdH,
-  loginH, registerH, logoutH, meH, forgotH, resetH] = await Promise.all([
+  loginH, registerH, logoutH, meH, forgotH, resetH, flashReviewsH] = await Promise.all([
   h("../api/_subjects/index.js"),
   h("../api/_subjects/[id].js"),
   h("../api/_categories/index.js"),
@@ -79,6 +79,7 @@ const [subjectsH, subjectByIdH, categoriesH, categoryByIdH, summaryH,
   h("../api/_auth/me.js"),
   h("../api/_auth/forgot-password.js"),
   h("../api/_auth/reset-password/[token].js"),
+  h("../api/_flash/reviews/index.js"),
 ]);
 
 console.log("ROUTES");
@@ -114,6 +115,7 @@ const ROUTE_CASES = [
   ["/api/auth/forgot-password", forgotH, {}],
   // The one that regressed once: a capture that is not called id.
   ["/api/auth/reset-password/abc123def", resetH, { token: "abc123def" }],
+  ["/api/flash/reviews", flashReviewsH, {}],
 ];
 
 for (const [url, expectedHandler, expectedParams] of ROUTE_CASES) {

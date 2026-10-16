@@ -108,3 +108,16 @@ export function isDueToday(due, now = new Date()) {
 export function isStruggling(score) {
   return typeof score === "number" && score >= STRUGGLE_THRESHOLD;
 }
+
+// Milliseconds -> a compact "4m 12s" / "42s". Used by the session summary to
+// show how long a sitting took. Non-positive / unknown input reads as "0s".
+export function formatDuration(ms) {
+  const total = Number(ms);
+  if (!Number.isFinite(total) || total <= 0) return "0s";
+  const seconds = Math.round(total / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  if (minutes === 0) return `${rest}s`;
+  if (rest === 0) return `${minutes}m`;
+  return `${minutes}m ${rest}s`;
+}

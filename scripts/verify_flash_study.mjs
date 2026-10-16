@@ -178,6 +178,60 @@ async function main() {
     });
     check("review a card outside the session -> 400", res.statusCode === 400);
 
+    // ---------- flat POST /api/flash/reviews ----------
+    // Its own sitting: these answers must not change the summary asserted below
+    // for `sessionId`.
+    res = await call("POST", "/api/flash/sessions", {
+      cookie: a.cookie,
+      body: { scope_type: "all", mode: "all" },
+    });
+    const flatSessionId = res.body.id;
+    check("flat-review fixture session created", res.statusCode === 201 && Boolean(flatSessionId));
+
+    res = await call("POST", "/api/flash/reviews", {
+      cookie: a.cookie,
+      body: {
+        session_id: flatSessionId,
+        card_id: cardIds[1],
+        rating: "hard",
+        think_ms: 900,
+        total_ms: 1500,
+        is_echo: false,
+      },
+    });
+    check(
+      "POST /api/flash/reviews -> 200 with the new due date",
+      res.statusCode === 200 &&
+        typeof res.body.due === "string" &&
+        res.body.is_echo === false &&
+        res.body.session_id === Number(flatSessionId),
+      JSON.stringify(res.body).slice(0, 220)
+    );
+    const completedAfterFlat = res.body.completed_count;
+
+    // is_echo marks a repeat answer: it is logged, but never moves the counter.
+    res = await call("POST", "/api/flash/reviews", {
+      cookie: a.cookie,
+      body: { session_id: flatSessionId, card_id: cardIds[1], rating: "good", is_echo: true },
+    });
+    check(
+      "is_echo is recorded and does not bump completed_count",
+      res.statusCode === 200 && res.body.is_echo === true && res.body.completed_count === completedAfterFlat,
+      JSON.stringify(res.body).slice(0, 220)
+    );
+
+    res = await call("POST", "/api/flash/reviews", {
+      cookie: a.cookie,
+      body: { card_id: cardIds[0], rating: 1 },
+    });
+    check("flat review without session_id -> 400", res.statusCode === 400);
+
+    res = await call("POST", "/api/flash/reviews", {
+      cookie: a.cookie,
+      body: { session_id: flatSessionId, card_id: cardIds[0], rating: 9 },
+    });
+    check("flat review with an invalid rating -> 400", res.statusCode === 400);
+
     // ---------- finish + summary ----------
     res = await call("POST", `/api/flash/sessions/${sessionId}/finish`, { cookie: a.cookie });
     check(

@@ -16,6 +16,7 @@ import {
   STATES,
   schedule,
   previewIntervals,
+  getRetrievability,
   computeStruggleScore,
   normalizeRating,
 } from "../../src/modules/flashcards/lib/scheduler/index.js";
@@ -23,10 +24,12 @@ import { STRUGGLE_THRESHOLD } from "./flashCards.js";
 
 export { RATINGS, STATES };
 
-// A study sitting studies one scope. "all" ignores the scope filter; the other
-// two resolve to a set of categories (a folder's categories, or a category and
-// every category nested beneath it).
-export const SESSION_SCOPES = new Set(["folder", "category", "all"]);
+// A study sitting studies one scope. "all" ignores the scope filter; "folder"
+// and "category" resolve to a set of categories (a folder's categories, or a
+// category and every category nested beneath it); "tag" matches any card whose
+// tags array contains the given tag. scope_id is a numeric id for folder /
+// category and unused for all / tag (a tag carries its own string).
+export const SESSION_SCOPES = new Set(["folder", "category", "tag", "all"]);
 
 // "due"  - reviewable today (new + due), the default.
 // "focus" - a short, bounded slice of the due queue (settings.focus_*).
@@ -77,10 +80,16 @@ function numberOr(value, fallback) {
 
 // ---------- queue ----------
 
-// Parameterised query for the card ids a session should queue. Returns
+// Parameterised query for the candidate cards a session could queue. Returns
 // { text, params } for sql.query(). scopeType "all" adds no scope clause, so it
 // simply means "every unsuspended card of this user".
-export function candidateQuery({ uid, scopeType, scopeId, mode }) {
+//
+// The rows carry the scheduler state as well as the id, because the standard
+// ("due") ordering - due cards by lowest retrievability first, then new cards -
+// is computed in JS with the pure scheduler (see orderQueue). SQL only narrows
+// the scope and applies the due-date cut-off; the SQL ORDER BY below is just a
+// stable pre-sort so the JS sort has deterministic tie-breaks.
+export function candidateQuery({ uid, scopeType, scopeId, tag, mode }) {
   const params = [uid];
   const where = ["c.user_id = $1", "c.suspended = false"];
 
@@ -102,6 +111,11 @@ export function candidateQuery({ uid, scopeType, scopeId, mode }) {
         SELECT id FROM sub
       )`);
     }
+  } else if (scopeType === "tag") {
+    // Tags are free text (fc_cards.tags is a TEXT[]); "@>" is index-backed by
+    // the GIN index on tags.
+    params.push(tag);
+    where.push(`c.tags @> ARRAY[$${params.length}]::text[]`);
   }
 
   let order;
@@ -119,7 +133,8 @@ export function candidateQuery({ uid, scopeType, scopeId, mode }) {
   }
 
   return {
-    text: `SELECT c.id
+    text: `SELECT c.id, c.tags,
+             s.state, s.due, s.stability, s.difficulty, s.reps, s.lapses, s.last_review
       FROM fc_cards c
       LEFT JOIN fc_card_state s ON s.card_id = c.id
       WHERE ${where.join(" AND ")}
@@ -127,6 +142,62 @@ export function candidateQuery({ uid, scopeType, scopeId, mode }) {
       LIMIT ${MAX_SESSION_CARDS}`,
     params,
   };
+}
+
+// ---------- queue ordering ----------
+
+// Stable "soonest due first, then lowest id" comparison for the new-card tail.
+function compareDue(a, b) {
+  const da = a?.due ? new Date(a.due).getTime() : Number.NEGATIVE_INFINITY;
+  const db = b?.due ? new Date(b.due).getTime() : Number.NEGATIVE_INFINITY;
+  if (da !== db) return da - db;
+  return (Number(a?.id) || 0) - (Number(b?.id) || 0);
+}
+
+// The standard due order: cards already in the scheduler (Learning / Review /
+// Relearning) first, most at risk first, then brand-new cards up to the daily
+// new-card cap. Retrievability is "how likely the card is still recalled"; the
+// lowest value is the closest to being forgotten, so it is reviewed first.
+//
+// New cards are capped, not sorted away: a queue that is all new cards is
+// limited to what is left of settings.new_cards_per_day today. Modes other than
+// due / focus keep the SQL order (mapped to plain ids).
+export function orderQueue(candidates, { mode, now = new Date(), settings = {}, newCap = Infinity } = {}) {
+  const rows = Array.isArray(candidates) ? candidates : [];
+  if (mode !== "due" && mode !== "focus") return rows.map((row) => row.id);
+
+  const dueRows = [];
+  const newRows = [];
+  for (const row of rows) {
+    if ((row?.state ?? 0) === STATES.New) newRows.push(row);
+    else dueRows.push({ row, retrievability: getRetrievability(cardStateFromRow(row), now, settings) });
+  }
+
+  dueRows.sort((a, b) => a.retrievability - b.retrievability || compareDue(a.row, b.row));
+  newRows.sort(compareDue);
+
+  const cap = Number.isFinite(newCap) ? Math.max(0, Math.floor(newCap)) : Infinity;
+  const fresh = cap === Infinity ? newRows : newRows.slice(0, cap);
+
+  return [...dueRows.map((entry) => entry.row.id), ...fresh.map((row) => row.id)];
+}
+
+// How many brand-new cards this user has already met today. One row per first
+// answer (state_before = 0), distinct by card so a card seen twice today counts
+// once. Parameters: $1 user_id.
+export const NEW_INTRODUCED_SQL = `
+  SELECT count(DISTINCT card_id)::int AS n
+  FROM fc_review_logs
+  WHERE user_id = $1 AND state_before = 0
+    AND reviewed_at >= date_trunc('day', now())
+`;
+
+// What is left of the daily new-card budget: settings.new_cards_per_day minus
+// the cards already introduced today. Never negative.
+export function newCapRemaining(settings = {}, introducedToday = 0) {
+  const raw = Number(settings.new_cards_per_day);
+  const cap = Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : DEFAULT_SETTINGS.new_cards_per_day;
+  return Math.max(0, cap - (Number(introducedToday) || 0));
 }
 
 // Create the session row and its ordered queue in one statement. Parameters:
@@ -312,13 +383,19 @@ export function updateStateArgs(cardId, plan, sessionId, uid) {
 export const INSERT_REVIEW_SQL = `
   INSERT INTO fc_review_logs (
     user_id, card_id, session_id, rating, think_ms, total_ms,
-    state_before, stability_before, stability_after
+    state_before, stability_before, stability_after, is_echo
   )
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
   RETURNING id
 `;
 
-export function insertReviewArgs(uid, cardId, sessionId, plan, { thinkMs = null, totalMs = null } = {}) {
+export function insertReviewArgs(
+  uid,
+  cardId,
+  sessionId,
+  plan,
+  { thinkMs = null, totalMs = null, isEcho = false } = {}
+) {
   return [
     uid,
     cardId,
@@ -329,6 +406,7 @@ export function insertReviewArgs(uid, cardId, sessionId, plan, { thinkMs = null,
     plan.before.state,
     plan.before.stability ?? null,
     plan.after.stability ?? null,
+    Boolean(isEcho),
   ];
 }
 

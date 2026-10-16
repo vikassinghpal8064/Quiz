@@ -5,6 +5,7 @@
 // is turned into an Error carrying the API's { error } message. Keeping the
 // request/error handling here means the flash screens never repeat it.
 import { cachedFetch } from "../../../lib/apiCache";
+import { createReviewQueue, flushWhenOnline } from "./reviewQueue";
 
 async function readError(res, fallback) {
   const body = await res.json().catch(() => null);
@@ -13,8 +14,21 @@ async function readError(res, fallback) {
 
 async function request(url, init, fallback) {
   const res = await cachedFetch(url, init);
-  if (!res.ok) throw new Error(await readError(res, fallback));
+  if (!res.ok) {
+    const err = new Error(await readError(res, fallback));
+    err.status = res.status;
+    throw err;
+  }
   return res.json();
+}
+
+// Worth retrying later: no response at all (offline / network error) or a server
+// error. A 4xx is the caller's fault and retrying it would never succeed, so it
+// is surfaced immediately.
+function isRetryable(err) {
+  if (!err) return false;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
+  return err.status === undefined || err.status >= 500;
 }
 
 const jsonInit = (method, body) => ({
@@ -136,3 +150,36 @@ export const finishSession = (id) =>
 
 export const abandonSession = (id) =>
   request(`/api/flash/sessions/${id}`, { method: "DELETE" }, "Failed to abandon the session");
+
+// ---------- offline review queue ----------
+
+// The raw POST, shared by the direct path and the queue's replay.
+const sendReview = (payload) =>
+  request("/api/flash/reviews", jsonInit("POST", payload), "Failed to record the review");
+
+const reviewQueue = createReviewQueue({ send: sendReview });
+flushWhenOnline(reviewQueue);
+
+// Record one answer through the flat /api/flash/reviews endpoint. If the request
+// cannot reach the server (offline, or a 5xx) the payload is queued and the call
+// resolves with { queued: true } so the study screen can carry on; the queue is
+// replayed automatically when the browser comes back online. A 4xx still throws.
+export async function postReview(payload) {
+  try {
+    return await sendReview(payload);
+  } catch (err) {
+    if (!isRetryable(err)) throw err;
+    reviewQueue.enqueue(payload);
+    return { queued: true, ...payload };
+  }
+}
+
+export const pendingReviewCount = () => reviewQueue.size();
+export const flushReviews = () => reviewQueue.flush();
+export const subscribeReviewQueue = (fn) => reviewQueue.subscribe(fn);
+
+// Best-effort removal of the most recent queued answer, used by "Undo" when the
+// answer it is undoing never reached the server.
+export function dropLastQueuedReview() {
+  reviewQueue.removeAt(reviewQueue.size() - 1);
+}

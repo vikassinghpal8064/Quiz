@@ -1,22 +1,27 @@
 import sql from "../../_lib/db.js";
 import { requireAuth } from "../../_lib/auth.js";
 import {
+  MAX_TAG_LENGTH,
   flashUserId,
   optionalInt,
   optionalString,
   parsePositiveInt,
+  requiredString,
   sendMissingFlashTable,
 } from "../../_lib/flashCards.js";
 import {
   CREATE_SESSION_SQL,
   DEFAULT_SESSION_CARDS,
   MAX_SESSION_CARDS,
+  NEW_INTRODUCED_SQL,
   SESSION_MODES,
   SESSION_SCOPES,
   candidateQuery,
   createSessionArgs,
   focusLimit,
   loadSettings,
+  newCapRemaining,
+  orderQueue,
 } from "../../_lib/flashStudy.js";
 
 // GET  /api/flash/sessions - the caller's most recent study sittings
@@ -24,16 +29,19 @@ import {
 //
 // POST body:
 //   {
-//     scope_type: "folder" | "category" | "all",
-//     scope_id:   number   (required unless scope_type is "all"),
+//     scope_type: "folder" | "category" | "tag" | "all",
+//     scope_id:   number   (folder / category only),
+//     tag:        string   (tag only; scope_id also accepts the tag string),
 //     mode:       "due" | "focus" | "struggling" | "all"   (default "due"),
 //     fraction:   number   (optional, focus only; 0 < f <= 1),
 //     limit:      number   (optional cap on queued cards)
 //   }
 //
-// The candidate ids are chosen in one read (candidateQuery), then the session
-// and its ordered queue are written in one statement (CREATE_SESSION_SQL), so
-// starting a session is two round trips no matter how many cards it holds.
+// The candidates are read once (candidateQuery), ordered in JS for the standard
+// due mode - due cards by lowest retrievability first, then new cards up to the
+// remaining daily cap - and then the session and its ordered queue are written
+// in one statement (CREATE_SESSION_SQL), so starting a session is a handful of
+// round trips no matter how many cards it holds.
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -71,8 +79,16 @@ export default async function handler(req, res) {
           .json({ error: `scope_type must be one of ${[...SESSION_SCOPES].join(", ")}` });
       }
 
+      // A tag scope carries its own string (fc_sessions.scope_id is INT, so it
+      // cannot hold a tag). Accept it either as `tag` or as a string scope_id.
       let scopeId = null;
-      if (scopeType !== "all") {
+      let scopeTag = null;
+      if (scopeType === "tag") {
+        const rawTag = body.tag ?? (typeof body.scope_id === "string" ? body.scope_id : null);
+        const parsedTag = requiredString(rawTag, "tag", MAX_TAG_LENGTH);
+        if (parsedTag.error) return res.status(400).json({ error: parsedTag.error });
+        scopeTag = parsedTag.value;
+      } else if (scopeType !== "all") {
         const parsed = parsePositiveInt(body.scope_id, "scope_id");
         if (parsed.error) return res.status(400).json({ error: parsed.error });
         scopeId = parsed.value;
@@ -115,9 +131,20 @@ export default async function handler(req, res) {
       }
 
       const settings = await loadSettings(sql, uid);
-      const query = candidateQuery({ uid, scopeType, scopeId, mode });
+      const query = candidateQuery({ uid, scopeType, scopeId, tag: scopeTag, mode });
       const candidates = await sql.query(query.text, query.params);
-      const ids = candidates.map((row) => row.id);
+
+      // The standard order (due by lowest retrievability, then new up to the
+      // daily cap) is computed for due / focus only; the other modes keep their
+      // SQL order.
+      let ids;
+      if (mode === "due" || mode === "focus") {
+        const introduced = await sql.query(NEW_INTRODUCED_SQL, [uid]);
+        const newCap = newCapRemaining(settings, introduced[0]?.n ?? 0);
+        ids = orderQueue(candidates, { mode, now: new Date(), settings, newCap });
+      } else {
+        ids = candidates.map((row) => row.id);
+      }
 
       // Focus shortens the queue; every other mode honours the caller's limit.
       const limit =
@@ -135,7 +162,9 @@ export default async function handler(req, res) {
           mode,
           fraction,
           plannedCount: queuedIds.length,
-          reason: mode,
+          // scope_id cannot hold a tag, so the tag travels in the queue's reason
+          // label ("tag:grammar") where GET /sessions/:id can surface it again.
+          reason: scopeTag ? `tag:${scopeTag}` : mode,
           cardIds: queuedIds,
         })
       );
