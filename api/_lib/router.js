@@ -52,6 +52,22 @@ import me from "../_auth/me.js";
 import forgotPassword from "../_auth/forgot-password.js";
 import resetPassword from "../_auth/reset-password/[token].js";
 
+// Flash cards. Handlers live in api/_flash/ and are exposed at /api/flash/*.
+import flashFolders from "../_flash/folders/index.js";
+import flashFolderById from "../_flash/folders/[id].js";
+import flashCategories from "../_flash/categories/index.js";
+import flashCategoryById from "../_flash/categories/[id].js";
+import flashCards from "../_flash/cards/index.js";
+import flashCardsBulk from "../_flash/cards/bulk.js";
+import flashCardsMove from "../_flash/cards/move.js";
+import flashCardsSuspend from "../_flash/cards/suspend.js";
+import flashCardById from "../_flash/cards/[id].js";
+import flashMediaToken from "../_flash/media/token.js";
+import flashSessions from "../_flash/sessions/index.js";
+import flashSessionById from "../_flash/sessions/[id].js";
+import flashSessionReview from "../_flash/sessions/[id]/review.js";
+import flashSessionFinish from "../_flash/sessions/[id]/finish.js";
+
 // Order matters only in that a more specific path must precede a shorter one
 // sharing its prefix. Nothing here is a prefix of another row, so the order is
 // just grouped by resource.
@@ -94,6 +110,27 @@ const ROUTES = [
   { path: "/auth/me", handler: me },
   { path: "/auth/forgot-password", handler: forgotPassword },
   { path: "/auth/reset-password/:token", handler: resetPassword },
+
+  { path: "/flash/folders", handler: flashFolders },
+  { path: "/flash/folders/:id", handler: flashFolderById },
+  { path: "/flash/categories", handler: flashCategories },
+  { path: "/flash/categories/:id", handler: flashCategoryById },
+  { path: "/flash/cards", handler: flashCards },
+  // bulk / move / suspend must precede /flash/cards/:id - all match three
+  // segments and the router takes the first hit, so "move" would otherwise be
+  // read as an id.
+  { path: "/flash/cards/bulk", handler: flashCardsBulk },
+  { path: "/flash/cards/move", handler: flashCardsMove },
+  { path: "/flash/cards/suspend", handler: flashCardsSuspend },
+  { path: "/flash/cards/:id", handler: flashCardById },
+  { path: "/flash/media/token", handler: flashMediaToken },
+  { path: "/flash/sessions", handler: flashSessions },
+  // review / finish must precede /flash/sessions/:id - all match four segments
+  // and the router takes the first hit, so "review" would otherwise be read as
+  // an id.
+  { path: "/flash/sessions/:id/review", handler: flashSessionReview },
+  { path: "/flash/sessions/:id/finish", handler: flashSessionFinish },
+  { path: "/flash/sessions/:id", handler: flashSessionById },
 ];
 
 const COMPILED = ROUTES.map((route) => ({
