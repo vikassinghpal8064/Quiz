@@ -1,0 +1,19 @@
+{
+  "name": "MCQ Quiz App — Flash Cards",
+  "short_name": "Flash Cards",
+  "description": "Spaced-repetition flash cards, offline-friendly.",
+  "start_url": "/flash",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1b1b1d",
+  "theme_color": "#1b1b1d",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

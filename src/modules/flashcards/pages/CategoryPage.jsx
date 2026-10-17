@@ -334,6 +334,12 @@ export default function CategoryPage() {
             Focus Session
           </button>
           <Link
+            to={`/flash/category/${categoryId}/struggle`}
+            className="rounded-xl border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink/75 transition hover:bg-stone-100"
+          >
+            Struggle list
+          </Link>
+          <Link
             to={`/flash/import?categoryId=${categoryId}${category?.folder_id ? `&folderId=${category.folder_id}` : ""}`}
             className="rounded-xl border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink/75 transition hover:bg-stone-100"
           >

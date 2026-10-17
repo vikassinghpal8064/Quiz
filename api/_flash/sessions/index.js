@@ -12,17 +12,31 @@ import {
 import {
   CREATE_SESSION_SQL,
   DEFAULT_SESSION_CARDS,
+  INSERT_FOCUS_META_SQL,
   MAX_SESSION_CARDS,
   NEW_INTRODUCED_SQL,
   SESSION_MODES,
   SESSION_SCOPES,
+  buildFocusQueue,
   candidateQuery,
   createSessionArgs,
-  focusLimit,
+  insertFocusMetaArgs,
   loadSettings,
   newCapRemaining,
   orderQueue,
 } from "../../_lib/flashStudy.js";
+
+// How many queued cards carry each reason label. Recomputed from the slice that
+// is actually queued (the caller's `limit` may trim the builder's plan), so the
+// recorded pool counts always add up to the queue length.
+function countReasons(entries) {
+  const counts = { due: 0, struggle: 0, new: 0, stale: 0 };
+  for (const entry of entries ?? []) {
+    if (counts[entry.reason] === undefined) counts[entry.reason] = 0;
+    counts[entry.reason] += 1;
+  }
+  return counts;
+}
 
 // GET  /api/flash/sessions - the caller's most recent study sittings
 // POST /api/flash/sessions - start a session and build its due queue
@@ -32,7 +46,7 @@ import {
 //     scope_type: "folder" | "category" | "tag" | "all",
 //     scope_id:   number   (folder / category only),
 //     tag:        string   (tag only; scope_id also accepts the tag string),
-//     mode:       "due" | "focus" | "struggling" | "all"   (default "due"),
+//     mode:       "due" | "focus" | "struggling" | "struggle" | "all"   (default "due"),
 //     fraction:   number   (optional, focus only; 0 < f <= 1),
 //     limit:      number   (optional cap on queued cards)
 //   }
@@ -134,24 +148,34 @@ export default async function handler(req, res) {
       const query = candidateQuery({ uid, scopeType, scopeId, tag: scopeTag, mode });
       const candidates = await sql.query(query.text, query.params);
 
-      // The standard order (due by lowest retrievability, then new up to the
-      // daily cap) is computed for due / focus only; the other modes keep their
-      // SQL order.
       let ids;
-      if (mode === "due" || mode === "focus") {
+      let reasons = null;
+      let focusMeta = null;
+
+      if (mode === "focus") {
+        // Focus sizes itself from the whole active deck and fills the queue from
+        // four pools (due / struggle / new / coverage). The builder is pure, so
+        // the sizing rule matches the client's previews exactly.
         const introduced = await sql.query(NEW_INTRODUCED_SQL, [uid]);
         const newCap = newCapRemaining(settings, introduced[0]?.n ?? 0);
-        ids = orderQueue(candidates, { mode, now: new Date(), settings, newCap });
+        const built = buildFocusQueue({
+          cards: candidates,
+          settings: { ...settings, ...(fraction != null ? { focus_fraction: fraction } : {}) },
+          now: new Date(),
+          newCap,
+          interleave: scopeType === "folder",
+        });
+        const entries = built.entries.slice(0, requestedLimit);
+        ids = entries.map((entry) => entry.id);
+        reasons = entries.map((entry) => entry.reason);
+        focusMeta = { ...built.meta, ...countReasons(entries), target: built.meta.target };
+      } else if (mode === "due") {
+        const introduced = await sql.query(NEW_INTRODUCED_SQL, [uid]);
+        const newCap = newCapRemaining(settings, introduced[0]?.n ?? 0);
+        ids = orderQueue(candidates, { mode, now: new Date(), settings, newCap }).slice(0, requestedLimit);
       } else {
-        ids = candidates.map((row) => row.id);
+        ids = candidates.map((row) => row.id).slice(0, requestedLimit);
       }
-
-      // Focus shortens the queue; every other mode honours the caller's limit.
-      const limit =
-        mode === "focus"
-          ? focusLimit(ids.length, { ...settings, ...(fraction != null ? { focus_fraction: fraction } : {}) })
-          : requestedLimit;
-      const queuedIds = ids.slice(0, limit);
 
       const rows = await sql.query(
         CREATE_SESSION_SQL,
@@ -161,15 +185,26 @@ export default async function handler(req, res) {
           scopeId,
           mode,
           fraction,
-          plannedCount: queuedIds.length,
-          // scope_id cannot hold a tag, so the tag travels in the queue's reason
-          // label ("tag:grammar") where GET /sessions/:id can surface it again.
+          plannedCount: ids.length,
+          // Non-focus modes share one label; a tag scope keeps its marker there
+          // because fc_sessions.scope_id cannot hold a tag.
           reason: scopeTag ? `tag:${scopeTag}` : mode,
-          cardIds: queuedIds,
+          reasons,
+          cardIds: ids,
         })
       );
 
-      return res.status(201).json({ ...rows[0], queued: rows[0].queued ?? queuedIds.length });
+      // Focus sessions also record what the builder decided, so the study screen
+      // and the summary can report the leftover-due count.
+      if (focusMeta) {
+        await sql.query(INSERT_FOCUS_META_SQL, insertFocusMetaArgs(uid, rows[0].id, focusMeta));
+      }
+
+      return res.status(201).json({
+        ...rows[0],
+        queued: rows[0].queued ?? ids.length,
+        ...(focusMeta ? { leftover_due: focusMeta.leftover_due, focus: focusMeta } : {}),
+      });
     }
 
     return res.status(405).json({ error: "Method not allowed" });

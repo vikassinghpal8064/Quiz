@@ -8,6 +8,7 @@ import {
   requiredString,
   sendMissingFlashTable,
 } from "../../_lib/flashCards.js";
+import { deleteUnreferencedMedia } from "../../_lib/flashMedia.js";
 
 // PATCH  /api/flash/folders/:id - rename / re-theme a folder
 // DELETE /api/flash/folders/:id - delete a folder (cascades to categories + cards)
@@ -120,8 +121,9 @@ export default async function handler(req, res) {
     }
 
     // The counts must be read before the DELETE (the cascade removes the rows),
-    // so both statements run in one transaction, in order.
-    const [counts, deleted] = await sql.transaction((txn) => [
+    // so all three statements run in one transaction, in order. The middle one
+    // gathers the media object paths so the bucket objects can be removed after.
+    const [counts, mediaPaths, deleted] = await sql.transaction((txn) => [
       txn`
         SELECT
           count(DISTINCT c.id)::int AS category_count,
@@ -130,6 +132,13 @@ export default async function handler(req, res) {
         LEFT JOIN fc_cards card ON card.category_id = c.id
         WHERE c.folder_id = ${folderId}
       `,
+      txn`
+        SELECT DISTINCT m.storage_path
+        FROM fc_media m
+        JOIN fc_cards card ON card.id = m.card_id
+        JOIN fc_categories c ON c.id = card.category_id
+        WHERE c.folder_id = ${folderId} AND m.storage_path IS NOT NULL
+      `,
       txn`DELETE FROM fc_folders WHERE id = ${folderId} AND user_id = ${uid}
           RETURNING id, name`,
     ]);
@@ -137,6 +146,10 @@ export default async function handler(req, res) {
     if (!deleted.length) {
       return res.status(404).json({ error: "folder not found" });
     }
+
+    // Best-effort: the rows have cascaded away, so any path still referenced by
+    // a card outside the folder is kept and the rest are removed.
+    await deleteUnreferencedMedia(sql, mediaPaths.map((row) => row.storage_path), uid);
 
     return res.status(200).json({
       id: deleted[0].id,

@@ -49,7 +49,9 @@ const [subjectsH, subjectByIdH, categoriesH, categoryByIdH, summaryH,
   attemptsH, answersH, finishH, resultsH,
   newQ_H, wrongQ_H, starredQ_H, statsH,
   adminQuestionsH, adminQuestionFlagsH, moveQuestionsH, adminFlagByIdH,
-  loginH, registerH, logoutH, meH, forgotH, resetH, flashReviewsH] = await Promise.all([
+  loginH, registerH, logoutH, meH, forgotH, resetH, flashReviewsH, flashCategoryStruggleH,
+  flashImportJobsH, flashImportJobByIdH, flashImportDuplicatesH,
+  flashStatsH, flashStatsOverviewH, flashSettingsH] = await Promise.all([
   h("../api/_subjects/index.js"),
   h("../api/_subjects/[id].js"),
   h("../api/_categories/index.js"),
@@ -80,6 +82,13 @@ const [subjectsH, subjectByIdH, categoriesH, categoryByIdH, summaryH,
   h("../api/_auth/forgot-password.js"),
   h("../api/_auth/reset-password/[token].js"),
   h("../api/_flash/reviews/index.js"),
+  h("../api/_flash/categories/[id]/struggle.js"),
+  h("../api/_flash/import/jobs.js"),
+  h("../api/_flash/import/jobs/[id].js"),
+  h("../api/_flash/import/duplicates.js"),
+  h("../api/_flash/stats/index.js"),
+  h("../api/_flash/stats/overview.js"),
+  h("../api/_flash/settings/index.js"),
 ]);
 
 console.log("ROUTES");
@@ -116,6 +125,13 @@ const ROUTE_CASES = [
   // The one that regressed once: a capture that is not called id.
   ["/api/auth/reset-password/abc123def", resetH, { token: "abc123def" }],
   ["/api/flash/reviews", flashReviewsH, {}],
+  ["/api/flash/categories/5/struggle", flashCategoryStruggleH, { id: "5" }],
+  ["/api/flash/import/jobs", flashImportJobsH, {}],
+  ["/api/flash/import/jobs/4", flashImportJobByIdH, { id: "4" }],
+  ["/api/flash/import/duplicates", flashImportDuplicatesH, {}],
+  ["/api/flash/stats", flashStatsH, {}],
+  ["/api/flash/stats/overview", flashStatsOverviewH, {}],
+  ["/api/flash/settings", flashSettingsH, {}],
 ];
 
 for (const [url, expectedHandler, expectedParams] of ROUTE_CASES) {
@@ -242,6 +258,13 @@ const NESTED = [
   ["questions/9/flag", '401 {"error":"Authentication required"}'],
   ["questions/9/difficulty", '401 {"error":"Authentication required"}'],
   ["questions/meta", '401 {"error":"Authentication required"}'],
+  ["flash/categories/5/struggle", '401 {"error":"Authentication required"}'],
+  ["flash/import/jobs", '401 {"error":"Authentication required"}'],
+  ["flash/import/jobs/4", '401 {"error":"Authentication required"}'],
+  ["flash/import/duplicates", '401 {"error":"Authentication required"}'],
+  ["flash/stats", '401 {"error":"Authentication required"}'],
+  ["flash/stats/overview", '401 {"error":"Authentication required"}'],
+  ["flash/settings", '401 {"error":"Authentication required"}'],
   ["admin/questions", '401 {"error":"Authentication required"}'],
   ["admin/questions/move", '401 {"error":"Authentication required"}'],
   ["auth/reset-password/deadbeef", '405 {"error":"Method not allowed"}'],

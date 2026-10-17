@@ -116,7 +116,8 @@ check("CREATE_CARD_SQL writes a state row", /fc_card_state/.test(CREATE_CARD_SQL
 
 console.log("\nROUTING");
 const h = (p) => import(p).then((m) => m.default);
-const [foldersH, folderByIdH, categoriesH, categoryByIdH, cardsH, bulkH, moveH, suspendH, cardByIdH] =
+const [foldersH, folderByIdH, categoriesH, categoryByIdH, cardsH, bulkH, moveH, suspendH, cardByIdH,
+  importJobsH, importJobByIdH, importDuplicatesH] =
   await Promise.all([
     h("../api/_flash/folders/index.js"),
     h("../api/_flash/folders/[id].js"),
@@ -127,6 +128,9 @@ const [foldersH, folderByIdH, categoriesH, categoryByIdH, cardsH, bulkH, moveH, 
     h("../api/_flash/cards/move.js"),
     h("../api/_flash/cards/suspend.js"),
     h("../api/_flash/cards/[id].js"),
+    h("../api/_flash/import/jobs.js"),
+    h("../api/_flash/import/jobs/[id].js"),
+    h("../api/_flash/import/duplicates.js"),
   ]);
 
 const ROUTE_CASES = [
@@ -139,6 +143,9 @@ const ROUTE_CASES = [
   ["/api/flash/cards/move", moveH, {}],
   ["/api/flash/cards/suspend", suspendH, {}],
   ["/api/flash/cards/9", cardByIdH, { id: "9" }],
+  ["/api/flash/import/jobs", importJobsH, {}],
+  ["/api/flash/import/jobs/9", importJobByIdH, { id: "9" }],
+  ["/api/flash/import/duplicates", importDuplicatesH, {}],
 ];
 for (const [url, expected, params] of ROUTE_CASES) {
   const segments = url.split("/").filter(Boolean).slice(1);
@@ -181,12 +188,17 @@ const UNAUTH = [
   "flash/cards/move",
   "flash/cards/suspend",
   "flash/cards/1",
+  "flash/import/jobs",
+  "flash/import/jobs/1",
+  "flash/import/duplicates",
 ];
 for (const path of UNAUTH) {
   check(`GET  /api/${path} -> 401`, (await callEntry(path)) === '401 {"error":"Authentication required"}');
 }
 check(`POST /api/flash/folders -> 401`, (await callEntry("flash/folders", "POST")) === '401 {"error":"Authentication required"}');
 check(`PATCH /api/flash/cards/1 -> 401`, (await callEntry("flash/cards/1", "PATCH")) === '401 {"error":"Authentication required"}');
+check(`POST /api/flash/import/jobs -> 401`, (await callEntry("flash/import/jobs", "POST")) === '401 {"error":"Authentication required"}');
+check(`PATCH /api/flash/import/jobs/1 -> 401`, (await callEntry("flash/import/jobs/1", "PATCH")) === '401 {"error":"Authentication required"}');
 
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 if (failures.length) console.log("FAILED:\n  - " + failures.join("\n  - "));

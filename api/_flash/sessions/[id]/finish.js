@@ -6,7 +6,7 @@ import {
   parsePositiveInt,
   sendMissingFlashTable,
 } from "../../../_lib/flashCards.js";
-import { summarizeRatings } from "../../../_lib/flashStudy.js";
+import { SELECT_FOCUS_META_SQL, focusMetaFromRow, summarizeRatings } from "../../../_lib/flashStudy.js";
 
 // POST /api/flash/sessions/:id/finish
 //
@@ -77,6 +77,18 @@ export default async function handler(req, res) {
     summary.total_ms = timeRows?.[0]?.total_ms ?? 0;
     summary.think_ms = timeRows?.[0]?.think_ms ?? 0;
     summary.struggling = struggleRows?.[0]?.n ?? 0;
+
+    // A focus session reports how much of the due backlog it could not reach.
+    // Read separately (not in the batch) so a database without
+    // db/flash_003.sql still finishes every other mode.
+    if (closed[0].mode === "focus") {
+      const metaRows = await sql.query(SELECT_FOCUS_META_SQL, [sessionId, uid]);
+      const focus = focusMetaFromRow(metaRows[0]);
+      if (focus) {
+        summary.focus = focus;
+        summary.leftover_due = focus.leftover_due;
+      }
+    }
 
     return res.status(200).json({ session: closed[0], summary });
   } catch (err) {

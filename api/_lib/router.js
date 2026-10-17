@@ -57,17 +57,26 @@ import flashFolders from "../_flash/folders/index.js";
 import flashFolderById from "../_flash/folders/[id].js";
 import flashCategories from "../_flash/categories/index.js";
 import flashCategoryById from "../_flash/categories/[id].js";
+import flashCategoryStruggle from "../_flash/categories/[id]/struggle.js";
 import flashCards from "../_flash/cards/index.js";
 import flashCardsBulk from "../_flash/cards/bulk.js";
 import flashCardsMove from "../_flash/cards/move.js";
 import flashCardsSuspend from "../_flash/cards/suspend.js";
 import flashCardById from "../_flash/cards/[id].js";
-import flashMediaToken from "../_flash/media/token.js";
+import flashImportJobs from "../_flash/import/jobs.js";
+import flashImportJobById from "../_flash/import/jobs/[id].js";
+import flashImportDuplicates from "../_flash/import/duplicates.js";
+import flashMediaSign from "../_flash/media/sign.js";
+import flashMediaRemove from "../_flash/media/remove.js";
 import flashSessions from "../_flash/sessions/index.js";
 import flashSessionById from "../_flash/sessions/[id].js";
 import flashSessionReview from "../_flash/sessions/[id]/review.js";
 import flashSessionFinish from "../_flash/sessions/[id]/finish.js";
 import flashReviews from "../_flash/reviews/index.js";
+import flashStats from "../_flash/stats/index.js";
+import flashStatsOverview from "../_flash/stats/overview.js";
+import flashSettings from "../_flash/settings/index.js";
+import flashBackup from "../_flash/backup/index.js";
 
 // Order matters only in that a more specific path must precede a shorter one
 // sharing its prefix. Nothing here is a prefix of another row, so the order is
@@ -115,6 +124,8 @@ const ROUTES = [
   { path: "/flash/folders", handler: flashFolders },
   { path: "/flash/folders/:id", handler: flashFolderById },
   { path: "/flash/categories", handler: flashCategories },
+  // struggle must precede /flash/categories/:id - both match the same prefix
+  { path: "/flash/categories/:id/struggle", handler: flashCategoryStruggle },
   { path: "/flash/categories/:id", handler: flashCategoryById },
   { path: "/flash/cards", handler: flashCards },
   // bulk / move / suspend must precede /flash/cards/:id - all match three
@@ -124,7 +135,14 @@ const ROUTES = [
   { path: "/flash/cards/move", handler: flashCardsMove },
   { path: "/flash/cards/suspend", handler: flashCardsSuspend },
   { path: "/flash/cards/:id", handler: flashCardById },
-  { path: "/flash/media/token", handler: flashMediaToken },
+  { path: "/flash/import/jobs", handler: flashImportJobs },
+  // jobs/:id must precede nothing else sharing the prefix, but it is listed
+  // before duplicates purely for readability - the router matches on segment
+  // count first, so /flash/import/jobs (three) can never shadow it (four).
+  { path: "/flash/import/jobs/:id", handler: flashImportJobById },
+  { path: "/flash/import/duplicates", handler: flashImportDuplicates },
+  { path: "/flash/media/sign", handler: flashMediaSign },
+  { path: "/flash/media/remove", handler: flashMediaRemove },
   { path: "/flash/sessions", handler: flashSessions },
   // review / finish must precede /flash/sessions/:id - all match four segments
   // and the router takes the first hit, so "review" would otherwise be read as
@@ -134,6 +152,12 @@ const ROUTES = [
   { path: "/flash/sessions/:id", handler: flashSessionById },
   // The flat review endpoint (session id in the body).
   { path: "/flash/reviews", handler: flashReviews },
+  // /flash/stats/overview must precede /flash/stats - both share the prefix and
+  // the more specific path has to win.
+  { path: "/flash/stats/overview", handler: flashStatsOverview },
+  { path: "/flash/stats", handler: flashStats },
+  { path: "/flash/settings", handler: flashSettings },
+  { path: "/flash/backup", handler: flashBackup },
 ];
 
 const COMPILED = ROUTES.map((route) => ({

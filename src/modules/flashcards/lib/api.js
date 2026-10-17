@@ -6,6 +6,7 @@
 // request/error handling here means the flash screens never repeat it.
 import { cachedFetch } from "../../../lib/apiCache";
 import { createReviewQueue, flushWhenOnline } from "./reviewQueue";
+import { cacheSession, readCachedSession } from "./sessionCache";
 
 async function readError(res, fallback) {
   const body = await res.json().catch(() => null);
@@ -78,6 +79,15 @@ export const updateCategory = (id, payload) =>
 export const deleteCategory = (id) =>
   request(`/api/flash/categories/${id}`, { method: "DELETE" }, "Failed to delete category");
 
+// The category's hardest cards (and, for nested categories, their children's),
+// each with its struggle score and average think time.
+export const getStruggleList = (id, limit) =>
+  request(
+    `/api/flash/categories/${id}/struggle${limit ? `?limit=${encodeURIComponent(limit)}` : ""}`,
+    undefined,
+    "Failed to load the struggle list"
+  );
+
 // ---------- cards ----------
 
 export function listCards({ categoryId, q, tag, limit, cursor } = {}) {
@@ -122,6 +132,37 @@ export const suspendCards = (cardIds, suspended = true) =>
     "Failed to update cards"
   );
 
+// ---------- import jobs ----------
+
+// The durable record of one import run. The wizard opens a job before it starts
+// POSTing batches and PATCHes it after each one, so progress (and any errors)
+// survives a reload and can be inspected afterwards.
+export const listImportJobs = (limit) =>
+  request(
+    `/api/flash/import/jobs${limit ? `?limit=${encodeURIComponent(limit)}` : ""}`,
+    undefined,
+    "Failed to load import jobs"
+  );
+
+export const createImportJob = (payload) =>
+  request("/api/flash/import/jobs", jsonInit("POST", payload), "Failed to start the import job");
+
+export const updateImportJob = (id, payload) =>
+  request(
+    `/api/flash/import/jobs/${id}`,
+    jsonInit("PATCH", payload),
+    "Failed to update the import job"
+  );
+
+// The signatures of the cards already in a category, used to flag duplicate
+// rows before anything is written. See importers/signature.js for the shape.
+export const getDuplicateSignatures = (categoryId) =>
+  request(
+    `/api/flash/import/duplicates?categoryId=${encodeURIComponent(categoryId)}`,
+    undefined,
+    "Failed to check for duplicates"
+  );
+
 // ---------- study sessions ----------
 
 // Start a study sitting. `payload` is
@@ -134,9 +175,21 @@ export const listSessions = () =>
   request("/api/flash/sessions", undefined, "Failed to load study sessions");
 
 // The session, its ordered queue, and the scheduler settings needed to preview
-// the four rating buttons.
-export const getSession = (id) =>
-  request(`/api/flash/sessions/${id}`, undefined, "Failed to load the study session");
+// the four rating buttons. Every successful read is cached locally, so if the
+// network drops mid-sitting a reload replays the cached session and the answers
+// queue up instead of failing (see reviewQueue.js).
+export async function getSession(id) {
+  try {
+    const data = await request(`/api/flash/sessions/${id}`, undefined, "Failed to load the study session");
+    cacheSession(id, data);
+    return data;
+  } catch (err) {
+    if (!isRetryable(err)) throw err;
+    const cached = readCachedSession(id);
+    if (!cached) throw err;
+    return { ...cached, offline: true };
+  }
+}
 
 export const reviewCard = (sessionId, payload) =>
   request(
@@ -150,6 +203,35 @@ export const finishSession = (id) =>
 
 export const abandonSession = (id) =>
   request(`/api/flash/sessions/${id}`, { method: "DELETE" }, "Failed to abandon the session");
+
+// ---------- stats + settings ----------
+
+// Everything the /flash/stats screen draws. Filters: folderId / categoryId scope
+// the aggregates, days sets the retention + think-time window.
+export function getStats({ folderId, categoryId, days, limit } = {}) {
+  const params = new URLSearchParams();
+  if (folderId != null) params.set("folderId", String(folderId));
+  if (categoryId != null) params.set("categoryId", String(categoryId));
+  if (days != null) params.set("days", String(days));
+  if (limit != null) params.set("limit", String(limit));
+  const qs = params.toString();
+  return request(`/api/flash/stats${qs ? `?${qs}` : ""}`, undefined, "Failed to load stats");
+}
+
+// The small dashboard slice shown on the flash home: today's reviews against the
+// daily goal, the streak, and what is due.
+export const getStatsOverview = () =>
+  request("/api/flash/stats/overview", undefined, "Failed to load today's progress");
+
+export const getSettings = () =>
+  request("/api/flash/settings", undefined, "Failed to load settings");
+
+export const updateSettings = (patch) =>
+  request("/api/flash/settings", jsonInit("PATCH", patch), "Failed to save settings");
+
+// A full JSON snapshot of the caller's folders, categories, cards and media.
+export const getBackup = () =>
+  request("/api/flash/backup", undefined, "Failed to load your backup");
 
 // ---------- offline review queue ----------
 

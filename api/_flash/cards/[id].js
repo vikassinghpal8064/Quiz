@@ -2,7 +2,7 @@ import sql from "../../_lib/db.js";
 import { requireAuth } from "../../_lib/auth.js";
 import {
   REPLACE_CARD_MEDIA_SQL,
-  SELECT_CARD_MEDIA_URLS_SQL,
+  SELECT_CARD_MEDIA_PATHS_SQL,
   flashUserId,
   mediaRowsFromSides,
   optionalBool,
@@ -13,7 +13,7 @@ import {
   validateSide,
   validateTags,
 } from "../../_lib/flashCards.js";
-import { deleteUnreferencedBlobs } from "../../_lib/flashMedia.js";
+import { deleteUnreferencedMedia } from "../../_lib/flashMedia.js";
 
 // PATCH  /api/flash/cards/:id - edit content, retag, move or suspend one card
 // DELETE /api/flash/cards/:id - delete a card (cascades to its state/media/logs)
@@ -44,10 +44,11 @@ export default async function handler(req, res) {
     const cardId = id.value;
 
     if (req.method === "DELETE") {
-      // Read the card's blob URLs before the delete: fc_media rows cascade away
-      // with the card, so afterwards there is nothing left to look up. The blobs
-      // themselves do not cascade, so they are removed from the store after.
-      const mediaUrls = await sql.query(SELECT_CARD_MEDIA_URLS_SQL, [cardId, uid]);
+      // Read the card's object paths before the delete: fc_media rows cascade
+      // away with the card, so afterwards there is nothing left to look up. The
+      // objects themselves do not cascade, so they are removed from the bucket
+      // after.
+      const mediaPaths = await sql.query(SELECT_CARD_MEDIA_PATHS_SQL, [cardId, uid]);
 
       const deleted = await sql`
         DELETE FROM fc_cards
@@ -58,8 +59,8 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: "card not found" });
       }
 
-      // Best-effort: a Blob failure never fails the delete (the card is gone).
-      await deleteUnreferencedBlobs(sql, mediaUrls.map((row) => row.url), uid);
+      // Best-effort: a storage failure never fails the delete (the card is gone).
+      await deleteUnreferencedMedia(sql, mediaPaths.map((row) => row.storage_path), uid);
 
       return res.status(200).json({ id: deleted[0].id, deleted: true });
     }
@@ -141,15 +142,15 @@ export default async function handler(req, res) {
     }
 
     // Media is derived from the block JSON, so only a front/back change can
-    // change it. Resync fc_media and delete any blob the edit orphaned - the
-    // old URLs are read before the rows are replaced.
+    // change it. Resync fc_media and delete any object the edit orphaned - the
+    // old paths are read before the rows are replaced.
     if (body.front !== undefined || body.back !== undefined) {
-      const previousUrls = (await sql.query(SELECT_CARD_MEDIA_URLS_SQL, [cardId, uid])).map(
-        (row) => row.url
+      const previousPaths = (await sql.query(SELECT_CARD_MEDIA_PATHS_SQL, [cardId, uid])).map(
+        (row) => row.storage_path
       );
       const mediaRows = mediaRowsFromSides(updated[0].front, updated[0].back);
       await sql.query(REPLACE_CARD_MEDIA_SQL, replaceCardMediaArgs(cardId, uid, mediaRows));
-      await deleteUnreferencedBlobs(sql, previousUrls, uid);
+      await deleteUnreferencedMedia(sql, previousPaths, uid);
     }
 
     return res.status(200).json({ ...updated[0], ...(state[0] ?? {}) });

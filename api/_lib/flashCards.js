@@ -7,7 +7,8 @@
 // Pure validation + small SQL helpers only. Every flash endpoint uses these so
 // the error shape ({ error: "..." }) and the limits stay in one place.
 
-import { MAX_MEDIA_URL_LENGTH } from "./flashMedia.js";
+import { MAX_MEDIA_URL_LENGTH, normaliseHash } from "./flashMedia.js";
+import { isSafeStoragePath } from "../../src/modules/flashcards/lib/storage/paths.js";
 
 // ---------- limits ----------
 
@@ -25,10 +26,15 @@ export const MAX_CARD_SEARCH = 200;
 // endpoints and the (future) study screens agree on one number.
 export const STRUGGLE_THRESHOLD = 0.5;
 
+// A card that has lapsed this many times is a "leech": it is suspended and the
+// study screen offers to have it rewritten. A lapse is an Again rating on a card
+// that was already in review.
+export const LEECH_LAPSES = 8;
+
 export const BLOCK_TYPES = new Set(["text", "image", "audio", "ink"]);
 
-// Blocks whose content lives in Vercel Blob. Their URL / mime / byte size are
-// mirrored into fc_media on save (see mediaRowsFromSides below).
+// Blocks whose content lives in object storage. Their URL / object path / mime
+// / byte size are mirrored into fc_media on save (see mediaRowsFromSides below).
 export const MEDIA_BLOCK_TYPES = new Set(["image", "audio"]);
 
 // ---------- missing-table guard ----------
@@ -42,7 +48,7 @@ export const MEDIA_BLOCK_TYPES = new Set(["image", "audio"]);
 // Apply with: paste db/flash_001.sql into the Neon SQL editor (or run it
 // through the migration runner - see db/flash_001_down.sql to roll back).
 export const FLASH_MIGRATION_HINT =
-  "Flash-card tables are missing. Apply db/flash_001.sql to the database first.";
+  "Flash-card tables are missing. Apply db/flash_001.sql (and db/flash_003.sql for focus sessions) to the database first.";
 
 export function isMissingFlashTable(err) {
   return err?.code === "42P01" && /\bfc_/.test(err.message ?? "");
@@ -285,6 +291,22 @@ function normaliseMime(value) {
   return value.trim().slice(0, 200);
 }
 
+// The object key a media block stored (fc_media.storage_path). Blocks written
+// before the Supabase move carry no path (only a Vercel Blob URL), so this is
+// null for them and they are simply never deleted from a bucket.
+function normaliseStoragePath(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const path = value.trim();
+  return isSafeStoragePath(path) ? path.slice(0, 512) : null;
+}
+
+// The pipeline's content hash (SHA-256, 64 hex), mirrored into fc_media.hash so
+// the sign endpoint can skip re-uploading identical bytes. A missing or bogus
+// value is null - de-duplication is an optimisation, never a requirement.
+function blockHash(value) {
+  return normaliseHash(value);
+}
+
 function collectMediaRows(side, sideName, out) {
   const blocks = Array.isArray(side?.blocks) ? side.blocks : [];
   for (const block of blocks) {
@@ -295,22 +317,41 @@ function collectMediaRows(side, sideName, out) {
         side: sideName,
         kind: block.type,
         url: block.url.trim(),
+        storage_path: normaliseStoragePath(block.path ?? block.storage_path),
         mime: normaliseMime(block.mime),
         bytes: normaliseBytes(block.bytes),
+        hash: blockHash(block.hash),
       });
     } else if (block.type === "ink") {
       // An ink block's bytes live in its rendered PNG preview (block.preview),
       // not on the block itself. Mirroring that URL into fc_media keeps the
-      // orphan-blob cleanup uniform: deleting a card still removes its preview.
+      // orphan cleanup uniform: deleting a card still removes its preview.
       const preview = block.preview;
-      if (!preview || typeof preview.url !== "string" || !preview.url.trim()) continue;
-      out.push({
-        side: sideName,
-        kind: "ink",
-        url: preview.url.trim(),
-        mime: normaliseMime(preview.mime),
-        bytes: normaliseBytes(preview.bytes),
-      });
+      if (preview && typeof preview.url === "string" && preview.url.trim()) {
+        out.push({
+          side: sideName,
+          kind: "ink",
+          url: preview.url.trim(),
+          storage_path: normaliseStoragePath(preview.path ?? preview.storage_path),
+          mime: normaliseMime(preview.mime),
+          bytes: normaliseBytes(preview.bytes),
+          hash: blockHash(preview.hash),
+        });
+      }
+      // A pencil drawing can sit on a uploaded background photo; that image is
+      // card media too, so track it alongside the preview.
+      const bg = block.bgImage;
+      if (bg && typeof bg.url === "string" && bg.url.trim()) {
+        out.push({
+          side: sideName,
+          kind: "image",
+          url: bg.url.trim(),
+          storage_path: normaliseStoragePath(bg.path ?? bg.storage_path),
+          mime: normaliseMime(bg.mime),
+          bytes: normaliseBytes(bg.bytes),
+          hash: blockHash(bg.hash),
+        });
+      }
     }
   }
 }
@@ -332,10 +373,10 @@ export const REPLACE_CARD_MEDIA_SQL = `
   WITH removed AS (
     DELETE FROM fc_media WHERE card_id = $1 AND user_id = $2
   )
-  INSERT INTO fc_media (user_id, card_id, side, kind, url, mime, bytes)
-  SELECT $2, $1, m.side, m.kind, m.url, m.mime, m.bytes
+  INSERT INTO fc_media (user_id, card_id, side, kind, url, storage_path, storage_provider, mime, bytes, hash)
+  SELECT $2, $1, m.side, m.kind, m.url, m.storage_path, 'supabase', m.mime, m.bytes, m.hash
   FROM jsonb_to_recordset($3::jsonb)
-       AS m(side text, kind text, url text, mime text, bytes int)
+       AS m(side text, kind text, url text, storage_path text, mime text, bytes int, hash text)
   RETURNING id
 `;
 
@@ -343,9 +384,21 @@ export function replaceCardMediaArgs(cardId, uid, rows) {
   return [cardId, uid, JSON.stringify(rows ?? [])];
 }
 
-// Every blob URL a card still owns; read just before the card is deleted so the
-// blobs can be removed from the store once the rows have cascaded away.
-export const SELECT_CARD_MEDIA_URLS_SQL = `
-  SELECT DISTINCT url FROM fc_media
-  WHERE card_id = $1 AND user_id = $2 AND url IS NOT NULL
+// Insert media rows for freshly created cards in one statement. The bulk import
+// path creates many cards at once and so cannot replace per card; each row
+// carries its own card_id. Parameters: $1 user_id, $2 rows::jsonb.
+export const INSERT_CARD_MEDIA_SQL = `
+  INSERT INTO fc_media (user_id, card_id, side, kind, url, storage_path, storage_provider, mime, bytes, hash)
+  SELECT $1, m.card_id, m.side, m.kind, m.url, m.storage_path, 'supabase', m.mime, m.bytes, m.hash
+  FROM jsonb_to_recordset($2::jsonb)
+       AS m(card_id int, side text, kind text, url text, storage_path text, mime text, bytes int, hash text)
+`;
+
+// Every object path a card still owns; read just before the card is deleted so
+// the objects can be removed from the bucket once the rows have cascaded away.
+// Rows written before the Supabase move have a NULL storage_path and are simply
+// skipped (their original Vercel Blob URL is left untouched).
+export const SELECT_CARD_MEDIA_PATHS_SQL = `
+  SELECT DISTINCT storage_path FROM fc_media
+  WHERE card_id = $1 AND user_id = $2 AND storage_path IS NOT NULL
 `;

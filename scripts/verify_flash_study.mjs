@@ -146,7 +146,10 @@ async function main() {
     });
     check(
       "re-answering a card does not double count",
-      res.statusCode === 200 && res.body.already_reviewed === true && res.body.completed_count === 1,
+      res.statusCode === 200 &&
+        res.body.already_reviewed === true &&
+        res.body.schedule_updated === false &&
+        res.body.completed_count === 1,
       JSON.stringify(res.body).slice(0, 200)
     );
 
@@ -232,6 +235,18 @@ async function main() {
     });
     check("flat review with an invalid rating -> 400", res.statusCode === 400);
 
+    // cardIds[2] has not been rated yet: a correct but very slow answer is
+    // "shaky" (Good at more than twice the per-card-type baseline).
+    res = await call("POST", "/api/flash/reviews", {
+      cookie: a.cookie,
+      body: { session_id: flatSessionId, card_id: cardIds[2], rating: "good", think_ms: 30000 },
+    });
+    check(
+      "slow correct answer is flagged shaky",
+      res.statusCode === 200 && res.body.shaky === true && typeof res.body.baseline_ms === "number",
+      JSON.stringify(res.body).slice(0, 220)
+    );
+
     // ---------- finish + summary ----------
     res = await call("POST", `/api/flash/sessions/${sessionId}/finish`, { cookie: a.cookie });
     check(
@@ -290,11 +305,40 @@ async function main() {
       body: { scope_type: "folder", scope_id: folderId, mode: "focus" },
     });
     check(
-      "focus queues a bounded slice of what is due",
-      res.statusCode === 201 && res.body.queued === 1 && res.body.mode === "focus",
-      JSON.stringify(res.body).slice(0, 160)
+      "focus queues a bounded slice of the active deck",
+      res.statusCode === 201 &&
+        res.body.queued === 2 &&
+        res.body.mode === "focus" &&
+        res.body.focus?.target === 2 &&
+        res.body.leftover_due === 0,
+      JSON.stringify(res.body).slice(0, 220)
     );
     const focusId = res.body.id;
+    // The pool counts add up to the queue length.
+    check(
+      "focus pool counts sum to the queue",
+      (res.body.focus?.due ?? 0) +
+        (res.body.focus?.struggle ?? 0) +
+        (res.body.focus?.new ?? 0) +
+        (res.body.focus?.stale ?? 0) ===
+        2
+    );
+
+    res = await call("GET", `/api/flash/sessions/${focusId}`, { cookie: a.cookie });
+    check(
+      "GET focus session returns its pool counts",
+      res.statusCode === 200 && res.body.focus?.target === 2 && res.body.leftover_due === 0,
+      JSON.stringify(res.body).slice(0, 200)
+    );
+
+    res = await call("POST", `/api/flash/sessions/${focusId}/finish`, { cookie: a.cookie });
+    check(
+      "finish focus session reports leftover_due",
+      res.statusCode === 200 &&
+        res.body.summary.leftover_due === 0 &&
+        res.body.summary.focus?.target === 2,
+      JSON.stringify(res.body.summary).slice(0, 200)
+    );
 
     res = await call("POST", "/api/flash/sessions", {
       cookie: a.cookie,
@@ -308,6 +352,24 @@ async function main() {
       body: { scope_type: "category", scope_id: categoryId, mode: "struggling" },
     });
     check("struggling queues the flagged card", res.statusCode === 201 && res.body.queued >= 1);
+
+    // ---------- struggle list ----------
+    res = await call("GET", `/api/flash/categories/${categoryId}/struggle`, { cookie: a.cookie });
+    check(
+      "struggle list returns the hardest cards first",
+      res.statusCode === 200 &&
+        Array.isArray(res.body.cards) &&
+        res.body.cards.length >= 1 &&
+        res.body.cards[0].id === cardIds[2] &&
+        res.body.cards[0].struggle_score >= 0.9,
+      JSON.stringify(res.body.cards?.[0] ?? res.body).slice(0, 220)
+    );
+
+    res = await call("GET", `/api/flash/categories/${categoryId}/struggle`, { cookie: b.cookie });
+    check("other user cannot read a category's struggle list -> 404", res.statusCode === 404);
+
+    res = await call("GET", "/api/flash/categories/999999/struggle", { cookie: a.cookie });
+    check("struggle list for an unknown category -> 404", res.statusCode === 404);
 
     res = await call("POST", "/api/flash/sessions", {
       cookie: a.cookie,
@@ -351,6 +413,29 @@ async function main() {
       body: { scope_type: "all", limit: 99999 },
     });
     check("limit above the cap -> 400", res.statusCode === 400);
+
+    // ---------- leech ----------
+    // A card one lapse short of the threshold: the next "again" suspends it.
+    await sql`
+      UPDATE fc_card_state SET state = 2, lapses = 7
+      WHERE card_id = ${cardIds[1]} AND user_id = ${String(a.id)}
+    `;
+    res = await call("POST", "/api/flash/sessions", {
+      cookie: a.cookie,
+      body: { scope_type: "all", mode: "all" },
+    });
+    const leechSessionId = res.body.id;
+    res = await call("POST", `/api/flash/sessions/${leechSessionId}/review`, {
+      cookie: a.cookie,
+      body: { card_id: cardIds[1], rating: "again" },
+    });
+    check(
+      "the 8th lapse flags the card as a leech",
+      res.statusCode === 200 && res.body.leech === true && res.body.state?.lapses === 8,
+      JSON.stringify(res.body).slice(0, 220)
+    );
+    const leechRows = await sql`SELECT suspended FROM fc_cards WHERE id = ${cardIds[1]}`;
+    check("a leech is suspended", leechRows[0]?.suspended === true);
 
     // ---------- abandon ----------
     res = await call("DELETE", `/api/flash/sessions/${focusId}`, { cookie: a.cookie });

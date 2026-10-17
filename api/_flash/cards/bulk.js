@@ -2,9 +2,11 @@ import sql from "../../_lib/db.js";
 import { requireAuth } from "../../_lib/auth.js";
 import {
   CREATE_CARD_SQL,
+  INSERT_CARD_MEDIA_SQL,
   MAX_BULK_CARDS,
   createCardArgs,
   flashUserId,
+  mediaRowsFromSides,
   optionalString,
   parsePositiveInt,
   sendMissingFlashTable,
@@ -112,6 +114,20 @@ export default async function handler(req, res) {
     );
 
     const created = results.map((rows) => rows[0]);
+
+    // Mirror each new card's media blocks into fc_media (one statement for the
+    // whole batch), so imported images / audio are tracked with a storage_path
+    // and are removed from the bucket when the card is later deleted.
+    const mediaRows = [];
+    for (const card of created) {
+      for (const row of mediaRowsFromSides(card.front, card.back)) {
+        mediaRows.push({ card_id: card.id, ...row });
+      }
+    }
+    if (mediaRows.length) {
+      await sql.query(INSERT_CARD_MEDIA_SQL, [uid, JSON.stringify(mediaRows)]);
+    }
+
     return res.status(201).json({ inserted: created.length, cards: created });
   } catch (err) {
     if (sendMissingFlashTable(res, err)) return;

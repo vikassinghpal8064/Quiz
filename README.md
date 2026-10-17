@@ -140,6 +140,15 @@ Add `JWT_SECRET`, `APP_URL`, `RESEND_API_KEY` and `RESEND_FROM_EMAIL` the same
 way. `JWT_SECRET` and `APP_URL` are required for the app to work at all; the two
 Resend values are only needed to actually send reset emails.
 
+#### Flash-card media storage (optional)
+
+Image / audio / handwriting uploads on flash cards use Supabase Storage. Set
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_BUCKET` (the same way
+as above) to enable them; without them the media endpoints answer `503` and the
+rest of the module works unchanged. The service-role key is server-side only.
+See [`README-flashcards.md`](./README-flashcards.md) for the bucket setup and the
+one-line test procedure.
+
 ## 3. Run locally
 
 ```bash

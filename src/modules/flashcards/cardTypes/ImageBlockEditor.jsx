@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { compressImage } from "../lib/image";
-import { uploadMediaBlob } from "../lib/media";
+import { loadImageQuality } from "../lib/imageQuality";
+import { removeMediaPaths, uploadMediaBlob } from "../lib/media";
 
 // Editor for one image block. Three ways in, as required: a file picker, a
 // camera capture input (mobile), and pasting from the clipboard. Whatever comes
 // in is resized + converted to WebP in the browser (lib/image.js) and uploaded
-// straight to Blob (lib/media.js); the block only stores the resulting URL plus
-// a little metadata.
+// through the storage adapter (lib/media.js); the block only stores the
+// resulting public URL, object path plus a little metadata.
 function formatBytes(bytes) {
   if (bytes === null || bytes === undefined) return "";
   if (bytes < 1024) return `${bytes} B`;
@@ -22,6 +23,7 @@ export default function ImageBlockEditor({ block, onChange, onRemove, disabled =
   const fileRef = useRef(null);
   const cameraRef = useRef(null);
   const previewRef = useRef(null);
+  const sessionPathsRef = useRef([]);
 
   // Object URLs we create are ours to revoke.
   useEffect(
@@ -47,19 +49,29 @@ export default function ImageBlockEditor({ block, onChange, onRemove, disabled =
     setBusy(true);
     setProgress(0);
     try {
-      const prepared = await compressImage(file);
+      const quality = await loadImageQuality();
+      const prepared = await compressImage(file, { quality });
       setPreviewUrl(URL.createObjectURL(prepared.blob));
       const uploaded = await uploadMediaBlob(prepared.blob, {
         kind: "image",
         filename: file.name,
         mime: prepared.mime,
+        hash: prepared.hash,
         onProgress: ({ percentage }) => setProgress(Math.round(percentage ?? 0)),
       });
+      // A superseded upload from this same editing session is no longer needed;
+      // drop it from the bucket. A value loaded from a saved card is left alone -
+      // the server reconciles that on save.
+      if (sessionPathsRef.current.length) {
+        removeMediaPaths(sessionPathsRef.current).catch(() => {});
+      }
+      sessionPathsRef.current = uploaded.path ? [uploaded.path] : [];
       onChange?.({
         url: uploaded.url,
-        pathname: uploaded.pathname,
+        path: uploaded.path,
         mime: uploaded.mime,
         bytes: uploaded.bytes,
+        hash: uploaded.hash ?? prepared.hash ?? null,
         width: prepared.width,
         height: prepared.height,
       });

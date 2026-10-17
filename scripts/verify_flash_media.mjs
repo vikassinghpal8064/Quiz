@@ -3,15 +3,20 @@
 //
 // Drives the real dispatch entry (api/index.js) with a real session cookie, so
 // routing, auth, validation and the database are all exercised exactly as in
-// production. Requires db/flash_001.sql and db/flash_002.sql to be applied.
+// production. Requires db/flash_001.sql, db/flash_002.sql and db/flash_005.sql
+// to be applied.
 //
-// Blob uploads themselves are NOT exercised here: they require
-// BLOB_READ_WRITE_TOKEN and a real browser-to-Blob PUT. What is checked is the
-// server half of the contract:
-//   - the token endpoint rejects anonymous callers and answers 503 when Blob is
-//     not configured,
-//   - a card's image / audio blocks are mirrored into fc_media on save and on
-//     edit, and dropped when the media is removed or the card is deleted,
+// The bucket PUT itself is NOT exercised here: it needs SUPABASE_URL /
+// SUPABASE_SERVICE_ROLE_KEY and a real browser-to-bucket upload. What is checked
+// is the server half of the contract:
+//   - the sign endpoint rejects anonymous callers, bad mime types and oversized
+//     files, and answers 503 when Storage is not configured,
+//   - the remove endpoint is authenticated and only accepts safe flash/ paths,
+//   - a card's image / audio / ink blocks are mirrored into fc_media (including
+//     storage_path and the content hash) on save and on edit, and dropped when
+//     the media is removed or the card is deleted,
+//   - a content hash this user already owns resolves back to the stored object
+//     (findStoredObjectByHash), which is what makes sign skip the PUT,
 //   - url-less / oversized media blocks are rejected.
 //
 //   node scripts/verify_flash_media.mjs
@@ -23,7 +28,7 @@ process.loadEnvFile(".env");
 const { createTestAccount } = await import("./_auth_fixture.mjs");
 const { default: dispatch } = await import("../api/index.js");
 const { default: sql } = await import("../api/_lib/db.js");
-const { blobConfigured } = await import("../api/_lib/flashMedia.js");
+const { mediaConfigured } = await import("../api/_lib/flashMedia.js");
 
 let pass = 0;
 let fail = 0;
@@ -73,13 +78,18 @@ async function call(method, path, { query, body, cookie } = {}) {
   return res;
 }
 
-const IMAGE_URL = "https://blob.example.test/fc/image/probe-image.webp";
-const AUDIO_URL = "https://blob.example.test/fc/audio/probe-audio.webm";
-const IMAGE_URL_2 = "https://blob.example.test/fc/image/probe-image-2.webp";
+const IMAGE_URL = "https://cdn.example.test/storage/v1/object/public/flash-media/flash/2026/probe-image.webp";
+const AUDIO_URL = "https://cdn.example.test/storage/v1/object/public/flash-media/flash/2026/probe-audio.webm";
+const IMAGE_URL_2 = "https://cdn.example.test/storage/v1/object/public/flash-media/flash/2026/probe-image-2.webp";
+const INK_PREVIEW = "https://cdn.example.test/storage/v1/object/public/flash-media/flash/2026/probe-board.png";
+const IMAGE_PATH = "flash/2026/probe-image.webp";
+const IMAGE_PATH_2 = "flash/2026/probe-image-2.webp";
+const AUDIO_PATH = "flash/2026/probe-audio.webm";
+const INK_PATH = "flash/2026/probe-board.png";
 
 async function mediaRows(cardId) {
   return sql`
-    SELECT side, kind, url, mime, bytes
+    SELECT side, kind, url, storage_path, mime, bytes, hash
     FROM fc_media
     WHERE card_id = ${cardId}
     ORDER BY side, kind
@@ -111,12 +121,12 @@ async function main() {
         category_id: categoryId,
         front: {
           blocks: [
-            { type: "image", url: IMAGE_URL, mime: "image/webp", bytes: 2048, width: 800, height: 600 },
+            { type: "image", url: IMAGE_URL, path: IMAGE_PATH, mime: "image/webp", bytes: 2048, width: 800, height: 600 },
             { type: "text", text: "an image card" },
           ],
         },
         back: {
-          blocks: [{ type: "audio", url: AUDIO_URL, mime: "audio/webm", bytes: 4096 }],
+          blocks: [{ type: "audio", url: AUDIO_URL, path: AUDIO_PATH, mime: "audio/webm", bytes: 4096 }],
         },
       },
     });
@@ -128,20 +138,36 @@ async function main() {
     const imageRow = rows.find((r) => r.kind === "image");
     const audioRow = rows.find((r) => r.kind === "audio");
     check(
-      "image row carries side / url / mime / bytes",
+      "image row carries side / url / storage_path / mime / bytes",
       imageRow?.side === "front" &&
         imageRow?.url === IMAGE_URL &&
+        imageRow?.storage_path === IMAGE_PATH &&
         imageRow?.mime === "image/webp" &&
         imageRow?.bytes === 2048,
       JSON.stringify(imageRow)
     );
     check(
-      "audio row carries side / url / mime / bytes",
+      "audio row carries side / url / storage_path / mime / bytes",
       audioRow?.side === "back" &&
         audioRow?.url === AUDIO_URL &&
+        audioRow?.storage_path === AUDIO_PATH &&
         audioRow?.mime === "audio/webm" &&
         audioRow?.bytes === 4096,
       JSON.stringify(audioRow)
+    );
+
+    // A path a saved card references must be recognised by the remove endpoint
+    // (and therefore kept); it must never be reported as removed.
+    res = await call("POST", "/api/flash/media/remove", {
+      cookie: a.cookie,
+      body: { paths: [IMAGE_PATH] },
+    });
+    check(
+      "remove endpoint keeps a path a saved card references",
+      res.statusCode === 200 &&
+        Array.isArray(res.body?.removed) &&
+        !res.body.removed.includes(IMAGE_PATH),
+      JSON.stringify(res.body)
     );
 
     // ---------- edit: remove the audio ----------
@@ -159,7 +185,7 @@ async function main() {
       body: {
         front: {
           blocks: [
-            { type: "image", url: IMAGE_URL_2, mime: "image/webp", bytes: 1024, width: 400, height: 300 },
+            { type: "image", url: IMAGE_URL_2, path: IMAGE_PATH_2, mime: "image/webp", bytes: 1024, width: 400, height: 300 },
           ],
         },
       },
@@ -167,8 +193,8 @@ async function main() {
     check("edit that replaces the image succeeds", res.statusCode === 200);
     rows = await mediaRows(cardId);
     check(
-      "fc_media reflects the replacement url",
-      rows.length === 1 && rows[0].url === IMAGE_URL_2 && rows[0].bytes === 1024,
+      "fc_media reflects the replacement url + storage_path",
+      rows.length === 1 && rows[0].url === IMAGE_URL_2 && rows[0].storage_path === IMAGE_PATH_2 && rows[0].bytes === 1024,
       JSON.stringify(rows)
     );
 
@@ -196,7 +222,6 @@ async function main() {
     check("fc_media rows are gone after the card is deleted", rows.length === 0, JSON.stringify(rows));
 
     // ---------- handwriting (ink) ----------
-    const INK_PREVIEW = "https://blob.example.test/fc/ink/probe-board.png";
     const INK_STROKE = {
       id: "s1",
       tool: "pen",
@@ -217,7 +242,7 @@ async function main() {
               height: 800,
               background: "grid",
               strokes: [INK_STROKE],
-              preview: { url: INK_PREVIEW, mime: "image/png", bytes: 900, width: 1200, height: 800 },
+              preview: { url: INK_PREVIEW, path: INK_PATH, mime: "image/png", bytes: 900, width: 1200, height: 800 },
             },
           ],
         },
@@ -231,7 +256,11 @@ async function main() {
     const inkRow = rows.find((r) => r.kind === "ink");
     check(
       "the ink preview is mirrored into fc_media as kind 'ink'",
-      inkRow?.side === "front" && inkRow?.url === INK_PREVIEW && inkRow?.mime === "image/png" && inkRow?.bytes === 900,
+      inkRow?.side === "front" &&
+        inkRow?.url === INK_PREVIEW &&
+        inkRow?.storage_path === INK_PATH &&
+        inkRow?.mime === "image/png" &&
+        inkRow?.bytes === 900,
       JSON.stringify(rows)
     );
 
@@ -257,54 +286,220 @@ async function main() {
     });
     check("an empty ink block is rejected", res.statusCode === 400, JSON.stringify(res.body));
 
-    // ---------- media token endpoint ----------
-    res = await call("POST", "/api/flash/media/token", {
-      body: { type: "blob.generate-client-token", payload: { pathname: "fc/image/x.webp" } },
+    // ---------- media sign endpoint ----------
+    res = await call("POST", "/api/flash/media/sign", {
+      body: { kind: "image", mime: "image/webp", bytes: 1024, filename: "x.webp" },
     });
-    check("token endpoint rejects anonymous callers", res.statusCode === 401, `status ${res.statusCode}`);
+    check("sign endpoint rejects anonymous callers", res.statusCode === 401, `status ${res.statusCode}`);
 
-    res = await call("POST", "/api/flash/media/token", {
+    res = await call("POST", "/api/flash/media/sign", {
       cookie: a.cookie,
-      body: { type: "blob.generate-client-token", payload: { pathname: "fc/image/x.webp" } },
+      body: { kind: "image", mime: "image/webp", bytes: 1024, filename: "x.webp" },
     });
-    if (blobConfigured()) {
+    if (mediaConfigured()) {
       check(
-        "configured token endpoint answers a client token",
-        res.statusCode === 200 && typeof res.body?.clientToken === "string",
+        "configured sign endpoint returns a signed upload",
+        res.statusCode === 200 &&
+          typeof res.body?.signedUrl === "string" &&
+          typeof res.body?.token === "string" &&
+          /^flash\/\d{4}\/[0-9a-f-]{36}\.webp$/.test(res.body?.path ?? "") &&
+          typeof res.body?.publicUrl === "string",
         JSON.stringify(res.body)
       );
     } else {
       check(
-        "unconfigured token endpoint answers 503",
+        "unconfigured sign endpoint answers 503",
         res.statusCode === 503 && typeof res.body?.error === "string",
         JSON.stringify(res.body)
       );
     }
 
-    res = await call("GET", "/api/flash/media/token", { cookie: a.cookie });
-    check("token endpoint rejects non-POST", res.statusCode === 405, `status ${res.statusCode}`);
+    res = await call("GET", "/api/flash/media/sign", { cookie: a.cookie });
+    check("sign endpoint rejects non-POST", res.statusCode === 405, `status ${res.statusCode}`);
 
-    // The ink prefix is an accepted upload path (used for handwriting previews).
-    // With Blob unconfigured the endpoint answers 503 before it validates the
-    // path, so this only proves it is not rejected any earlier; when configured
-    // it must mint a client token exactly like an image.
-    res = await call("POST", "/api/flash/media/token", {
+    // The mime / size rules live in createSignedUpload, which is pure validation
+    // until it actually signs - so they are checked directly here and hold even
+    // on a deployment with no Storage configured.
+    const { createSignedUpload } = await import("../api/_lib/flashMedia.js");
+
+    let threw = null;
+    try {
+      await createSignedUpload({ kind: "video", mime: "video/mp4", bytes: 100 });
+    } catch (err) {
+      threw = err;
+    }
+    check(
+      "createSignedUpload rejects a non image/audio mime",
+      Boolean(threw) && /image and audio/i.test(threw.message),
+      String(threw?.message)
+    );
+
+    threw = null;
+    try {
+      await createSignedUpload({ kind: "image", mime: "image/webp", bytes: 6 * 1024 * 1024 });
+    } catch (err) {
+      threw = err;
+    }
+    check(
+      "createSignedUpload rejects a file over the 5 MB ceiling",
+      Boolean(threw) && /too large/i.test(threw.message),
+      String(threw?.message)
+    );
+
+    threw = null;
+    try {
+      await createSignedUpload({ kind: "image", mime: "image/webp", bytes: -1 });
+    } catch (err) {
+      threw = err;
+    }
+    check(
+      "createSignedUpload rejects non-positive bytes",
+      Boolean(threw) && /positive/i.test(threw.message),
+      String(threw?.message)
+    );
+
+    // ---------- content-hash de-duplication ----------
+    // The pipeline hashes every encoded upload; on save the hash is mirrored
+    // into fc_media, and the sign endpoint resolves a known hash back to the
+    // stored object so identical bytes are never uploaded twice.
+    const HASH = "d".repeat(64);
+    res = await call("POST", "/api/flash/cards", {
       cookie: a.cookie,
-      body: { type: "blob.generate-client-token", payload: { pathname: "fc/ink/probe-board.png" } },
+      body: {
+        category_id: categoryId,
+        front: {
+          blocks: [
+            { type: "image", url: IMAGE_URL, path: IMAGE_PATH, mime: "image/webp", bytes: 2048, hash: HASH },
+          ],
+        },
+        back: { blocks: [] },
+      },
     });
-    if (blobConfigured()) {
+    const hashCardId = res.body?.id;
+    check("card with a hashed image is created", res.statusCode === 201 && hashCardId > 0, JSON.stringify(res.body));
+
+    rows = await mediaRows(hashCardId);
+    check("the image content hash is mirrored into fc_media", rows[0]?.hash === HASH, JSON.stringify(rows));
+
+    const { findStoredObjectByHash } = await import("../api/_lib/flashMedia.js");
+    const found = await findStoredObjectByHash(sql, String(a.id), HASH);
+    check(
+      "findStoredObjectByHash returns the stored object for the hash",
+      found?.url === IMAGE_URL && found?.path === IMAGE_PATH && found?.bytes === 2048,
+      JSON.stringify(found)
+    );
+    check(
+      "findStoredObjectByHash treats a malformed hash as a cache miss",
+      (await findStoredObjectByHash(sql, String(a.id), "not-a-hash")) === null
+    );
+    check(
+      "findStoredObjectByHash misses a hash this user never stored",
+      (await findStoredObjectByHash(sql, String(a.id), "e".repeat(64))) === null
+    );
+
+    if (mediaConfigured()) {
+      // With Storage configured the sign endpoint short-circuits: no signed URL,
+      // just the existing object's public URL.
+      res = await call("POST", "/api/flash/media/sign", {
+        cookie: a.cookie,
+        body: { kind: "image", mime: "image/webp", bytes: 2048, filename: "dup.webp", hash: HASH },
+      });
       check(
-        "configured token endpoint accepts an ink preview path",
-        res.statusCode === 200 && typeof res.body?.clientToken === "string",
-        JSON.stringify(res.body)
-      );
-    } else {
-      check(
-        "ink preview token request is not rejected before the config check",
-        res.statusCode === 503 && typeof res.body?.error === "string",
+        "sign de-duplicates a known hash (no signed url minted)",
+        res.statusCode === 200 &&
+          res.body?.deduplicated === true &&
+          res.body?.url === IMAGE_URL &&
+          !res.body?.signedUrl,
         JSON.stringify(res.body)
       );
     }
+
+    await call("DELETE", `/api/flash/cards/${hashCardId}`, { cookie: a.cookie });
+
+    // ---------- media remove endpoint ----------
+    res = await call("POST", "/api/flash/media/remove", { body: { paths: ["flash/2026/x.webp"] } });
+    check("remove endpoint rejects anonymous callers", res.statusCode === 401, `status ${res.statusCode}`);
+
+    res = await call("GET", "/api/flash/media/remove", { cookie: a.cookie });
+    check("remove endpoint rejects non-POST", res.statusCode === 405, `status ${res.statusCode}`);
+
+    res = await call("POST", "/api/flash/media/remove", {
+      cookie: a.cookie,
+      body: { paths: ["../etc/passwd", "evil/x.webp", ""] },
+    });
+    check(
+      "remove endpoint ignores unsafe paths",
+      res.statusCode === 200 && Array.isArray(res.body?.removed) && res.body.removed.length === 0,
+      JSON.stringify(res.body)
+    );
+
+    res = await call("POST", "/api/flash/media/remove", {
+      cookie: a.cookie,
+      body: { paths: ["flash/2026/superseded.webp"] },
+    });
+    check(
+      "remove endpoint accepts a safe flash/ path",
+      res.statusCode === 200 && Array.isArray(res.body?.removed),
+      JSON.stringify(res.body)
+    );
+    // ---------- bulk import mirrors media with storage_path ----------
+    res = await call("POST", "/api/flash/cards/bulk", {
+      cookie: a.cookie,
+      body: {
+        category_id: categoryId,
+        cards: [
+          {
+            front: { blocks: [{ type: "image", url: IMAGE_URL, path: IMAGE_PATH, mime: "image/webp", bytes: 11 }] },
+            back: { blocks: [] },
+          },
+          {
+            front: { blocks: [] },
+            back: { blocks: [{ type: "audio", url: AUDIO_URL, path: AUDIO_PATH, mime: "audio/webm", bytes: 12 }] },
+          },
+        ],
+      },
+    });
+    const bulkIds = (res.body?.cards ?? []).map((c) => c.id);
+    check(
+      "bulk import creates the cards",
+      res.statusCode === 201 && res.body?.inserted === 2 && bulkIds.length === 2,
+      JSON.stringify(res.body)
+    );
+    const bulkMedia = await sql`
+      SELECT card_id, kind, storage_path FROM fc_media
+      WHERE card_id = ANY(${bulkIds})
+      ORDER BY card_id, kind
+    `;
+    check(
+      "bulk import mirrors media rows with storage_path",
+      bulkMedia.length === 2 && bulkMedia.every((r) => typeof r.storage_path === "string" && r.storage_path),
+      JSON.stringify(bulkMedia)
+    );
+
+    // ---------- category delete gathers media paths, and still cascades ----
+    res = await call("POST", "/api/flash/cards", {
+      cookie: a.cookie,
+      body: {
+        category_id: categoryId,
+        front: {
+          blocks: [
+            { type: "image", url: IMAGE_URL, path: "flash/2026/cat-delete.webp", mime: "image/webp", bytes: 10 },
+          ],
+        },
+        back: { blocks: [] },
+      },
+    });
+    const catCardId = res.body?.id;
+    check("media card created before the category delete", res.statusCode === 201 && catCardId > 0, JSON.stringify(res.body));
+
+    res = await call("DELETE", `/api/flash/categories/${categoryId}`, { cookie: a.cookie });
+    check(
+      "deleting a category with media cards succeeds",
+      res.statusCode === 200,
+      `${res.statusCode} ${JSON.stringify(res.body)}`
+    );
+    rows = await mediaRows(catCardId);
+    check("media rows cascade away with the category", rows.length === 0, JSON.stringify(rows));
   } finally {
     if (folderId) await sql`DELETE FROM fc_folders WHERE id = ${folderId}`;
     await sql`DELETE FROM fc_folders WHERE user_id = ${String(a.id)}`;

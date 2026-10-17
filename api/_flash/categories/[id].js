@@ -9,6 +9,7 @@ import {
   sendMissingFlashTable,
   STRUGGLE_THRESHOLD,
 } from "../../_lib/flashCards.js";
+import { deleteUnreferencedMedia } from "../../_lib/flashMedia.js";
 
 // GET    /api/flash/categories/:id - the category, its folder name and its counts
 // PATCH  /api/flash/categories/:id - rename / reshuffle / re-parent a category
@@ -186,8 +187,10 @@ export default async function handler(req, res) {
     }
 
     // DELETE. The recursive CTE counts the whole subtree (children, their
-    // children, ...) and every card in it before the cascade removes them.
-    const [counts, deleted] = await sql.transaction((txn) => [
+    // children, ...) and every card in it before the cascade removes them. The
+    // middle statement reads every media object path in that subtree first, so
+    // the bucket objects can be removed once their rows have cascaded away.
+    const [counts, mediaPaths, deleted] = await sql.transaction((txn) => [
       txn`
         WITH RECURSIVE subtree AS (
           SELECT id FROM fc_categories WHERE id = ${categoryId}
@@ -201,6 +204,20 @@ export default async function handler(req, res) {
             AS card_count,
           (SELECT count(*)::int FROM subtree) - 1 AS child_count
       `,
+      txn`
+        WITH RECURSIVE subtree AS (
+          SELECT id FROM fc_categories WHERE id = ${categoryId}
+          UNION ALL
+          SELECT c.id
+          FROM fc_categories c
+          JOIN subtree s ON c.parent_id = s.id
+        )
+        SELECT DISTINCT m.storage_path
+        FROM fc_media m
+        JOIN fc_cards card ON card.id = m.card_id
+        WHERE card.category_id IN (SELECT id FROM subtree)
+          AND m.storage_path IS NOT NULL
+      `,
       txn`DELETE FROM fc_categories WHERE id = ${categoryId} AND user_id = ${uid}
           RETURNING id, name`,
     ]);
@@ -208,6 +225,10 @@ export default async function handler(req, res) {
     if (!deleted.length) {
       return res.status(404).json({ error: "category not found" });
     }
+
+    // Best-effort: the rows have cascaded away, so any path still referenced by
+    // a card outside the subtree is kept and the rest are removed.
+    await deleteUnreferencedMedia(sql, mediaPaths.map((row) => row.storage_path), uid);
 
     return res.status(200).json({
       id: deleted[0].id,

@@ -21,6 +21,23 @@ import {
 // Used when there is not enough history to derive a baseline.
 export const DEFAULT_BASELINE_MS = 12_000;
 
+// Weight of the newest sample in the think-time average. 0.3 reacts to a card
+// getting faster or slower without letting a single outlier dominate.
+export const DEFAULT_EMA_ALPHA = 0.3;
+
+// Exponential moving average of think times. The first usable sample seeds the
+// average; an unusable sample leaves the previous value in place (null when
+// there was none). Never negative, and always rounded to whole milliseconds so
+// it round-trips through fc_card_state.avg_think_ms (INT).
+export function exponentialMovingAverage(previous, sample, alpha = DEFAULT_EMA_ALPHA) {
+  const usable = typeof sample === "number" && Number.isFinite(sample) && sample >= 0;
+  const prior = Number.isFinite(previous) && previous > 0 ? previous : null;
+  if (!usable) return prior;
+  const weight = Number.isFinite(alpha) && alpha > 0 && alpha <= 1 ? alpha : DEFAULT_EMA_ALPHA;
+  if (prior === null) return Math.round(sample);
+  return Math.round(weight * sample + (1 - weight) * prior);
+}
+
 // Fraction of the last `window` reviews that were Again / Hard. Empty input
 // yields zeroes (never NaN).
 export function computeRates(reviews = [], window = 5) {

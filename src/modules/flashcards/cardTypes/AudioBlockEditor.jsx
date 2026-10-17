@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { uploadMediaBlob } from "../lib/media";
+import { removeMediaPaths, uploadMediaBlob } from "../lib/media";
 import { peaksFromBlob } from "../lib/waveform";
 
 // Editor for one audio block. Records with MediaRecorder (record / stop /
 // replay / re-record), shows a live level meter while recording and a static
 // waveform afterwards, enforces a max length, and also accepts an existing
-// audio file. The finished clip is uploaded straight to Blob; the block stores
-// the URL, mime, size, and a per-card "auto-play when revealed" flag.
+// audio file. The finished clip is uploaded through the storage adapter; the
+// block stores the public URL, object path, mime, size, and a per-card
+// "auto-play when revealed" flag.
 //
 // Everything browser-specific lives inside effects/handlers, so the component
 // still server-renders (the tests render it with renderToString).
@@ -14,6 +15,12 @@ import { peaksFromBlob } from "../lib/waveform";
 const MAX_KEY = "flash.audio.maxSeconds";
 const MAX_OPTIONS = [30, 60, 120, 300];
 const METER_BARS = 52;
+
+// 32 kbps is plenty for a spoken language/definition clip and keeps a minute of
+// audio around 240 KB - well inside the 5 MB upload ceiling. Without an explicit
+// bitrate MediaRecorder's default (often 128 kbps) makes voice cards several
+// times larger for no audible benefit.
+const AUDIO_BITS_PER_SECOND = 32000;
 
 const MIME_CANDIDATES = [
   "audio/webm;codecs=opus",
@@ -104,6 +111,7 @@ export default function AudioBlockEditor({ block, onChange, onRemove, disabled =
   const rafRef = useRef(null);
   const timerRef = useRef(null);
   const startedAtRef = useRef(0);
+  const sessionPathsRef = useRef([]);
   const lastPaintRef = useRef(0);
   const recordedUrlRef = useRef(null);
 
@@ -208,7 +216,10 @@ export default function AudioBlockEditor({ block, onChange, onRemove, disabled =
       streamRef.current = stream;
 
       const mimeType = pickMimeType();
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const recorder = new MediaRecorder(stream, {
+        ...(mimeType ? { mimeType } : {}),
+        audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
+      });
       chunksRef.current = [];
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size) chunksRef.current.push(event.data);
@@ -278,9 +289,13 @@ export default function AudioBlockEditor({ block, onChange, onRemove, disabled =
         mime,
         onProgress: ({ percentage }) => setProgress(Math.round(percentage ?? 0)),
       });
+      if (sessionPathsRef.current.length) {
+        removeMediaPaths(sessionPathsRef.current).catch(() => {});
+      }
+      sessionPathsRef.current = uploaded.path ? [uploaded.path] : [];
       onChange?.({
         url: uploaded.url,
-        pathname: uploaded.pathname,
+        path: uploaded.path,
         mime: uploaded.mime,
         bytes: uploaded.bytes,
         duration_ms: elapsedMs || block?.duration_ms || null,

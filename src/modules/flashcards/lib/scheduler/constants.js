@@ -32,6 +32,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   scheduler: SCHEDULER_NAMES.FSRS,
   desired_retention: 0.9,
   new_cards_per_day: 20,
+  // Reviews the user aims to complete in a day. Shown as progress on the flash
+  // home screen; stored in fc_settings like the scheduler knobs.
+  daily_goal: 30,
   focus_fraction: 0.25,
   focus_min: 10,
   focus_max: 60,
@@ -42,6 +45,19 @@ export const DEFAULT_SETTINGS = Object.freeze({
     lapse: 0.2,
     hard: 0.15,
   }),
+  // When true, a correct-but-slow ("shaky") answer schedules as Hard instead of
+  // being echoed back for a second pass. Off by default so the classic echo
+  // behaviour is unchanged.
+  auto_downgrade_shaky_correct: false,
+  // Play a card's audio block automatically once the answer is revealed.
+  audio_autoplay: true,
+  // balanced | high | lossless - the WebP quality the image pipeline encodes at
+  // (see lib/imageProcessing/presets.js). "high" (0.92) is the documented
+  // default; the value is duplicated here as a literal because this module
+  // deliberately imports nothing, so it is loadable on both client and server.
+  image_quality: "high",
+  // light | dark | system - mirrors the pre-paint script's localStorage key.
+  theme: "system",
 });
 
 export const DEFAULT_STRUGGLE_WEIGHTS = DEFAULT_SETTINGS.struggle_weights;

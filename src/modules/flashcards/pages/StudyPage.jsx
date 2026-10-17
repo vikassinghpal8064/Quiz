@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Toast from "../../../components/Toast";
 import useToast from "../hooks/useToast";
@@ -20,6 +20,11 @@ import { getCardType } from "../cardTypes/registry";
 import FlashBreadcrumbs from "../components/FlashBreadcrumbs";
 import { ErrorState } from "../components/FlashStates";
 
+// The full card editor is only needed when a leech is being rewritten, so it is
+// kept out of the study screen's initial bundle (same lazy split CategoryPage
+// uses).
+const CardEditorModal = lazy(() => import("../components/CardEditorModal"));
+
 // /flash/study/:sessionId - run one study sitting.
 //
 // The queue and the scheduler settings come from the server (GET .../sessions/:id).
@@ -32,6 +37,12 @@ import { ErrorState } from "../components/FlashStates";
 // Timing: think_ms is measured from the card appearing to the reveal, total_ms
 // from appearing to the rating. The clock pauses while the tab is hidden and any
 // sample over 120s is discarded as idle (lib/timing.js).
+//
+// Re-queueing: Again brings a card back a few slots later (at most twice); a
+// "shaky" correct answer (Good, but slower than the card-type baseline - the
+// server flags it) brings it back once, further down the queue, as an echo. The
+// server only moves the FSRS schedule on a card's FIRST rating in a sitting, so
+// these repeats are logged without disturbing the due date.
 //
 // `autoPlay` is handed to the viewer only on reveal, which is what lets an audio
 // block with its per-card flag set start playing at the right moment.
@@ -50,6 +61,26 @@ const SWIPE_RATINGS = {
   up: RATINGS.Easy,
   down: RATINGS.Hard,
 };
+
+// Re-queue tuning. Again brings a card back 3-5 slots later, at most twice per
+// card. A shaky-but-correct answer is echoed once, 8-12 slots later.
+const AGAIN_REQUEUE_MIN = 3;
+const AGAIN_REQUEUE_MAX = 5;
+const AGAIN_REQUEUE_LIMIT = 2;
+const SHAKY_REQUEUE_MIN = 8;
+const SHAKY_REQUEUE_MAX = 12;
+
+// A re-queued card is a second slot for the same card id; each slot needs its
+// own stable key so React (and Undo) can tell them apart.
+let slotSeq = 0;
+function makeKey() {
+  slotSeq += 1;
+  return `slot-${slotSeq}`;
+}
+
+function randomBetween(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
 
 // The card-state shape the (pure) scheduler reads, back-filled from a queue row.
 function stateFromRow(row) {
@@ -93,6 +124,12 @@ export default function StudyPage() {
   // Whether "Undo last answer" has anything to undo. Mirrors history.current,
   // kept as state so render never reads a ref (react-hooks/refs).
   const [canUndo, setCanUndo] = useState(false);
+  // The card a leech prompt is offering to rewrite (null when there is none).
+  const [leechCard, setLeechCard] = useState(null);
+  const [leechEditing, setLeechEditing] = useState(false);
+  // For a focus session: the builder's pool counts and leftover-due figure,
+  // shown on the summary.
+  const [focusMeta, setFocusMeta] = useState(null);
 
   // Timing: how long the question was on screen before the card was revealed
   // (thinkMs) and before it was rated (the stopwatch read at rating time). The
@@ -123,12 +160,15 @@ export default function StudyPage() {
   const load = useCallback(async () => {
     try {
       const data = await getSession(sessionId);
-      const cards = data.cards ?? [];
+      const cards = (data.cards ?? []).map((card) => ({ ...card, _key: makeKey() }));
       setSession(data.session);
       setSettings(data.settings ?? {});
       setQueue(cards);
       history.current = [];
       setCanUndo(false);
+      setLeechCard(null);
+      setLeechEditing(false);
+      setFocusMeta(data.focus ?? null);
       const firstUnreviewed = cards.findIndex((card) => !card.reviewed);
       setIndex(firstUnreviewed === -1 ? cards.length : firstUnreviewed);
       setRevealed(false);
@@ -219,31 +259,74 @@ export default function StudyPage() {
           rating,
           think_ms: thinkMs.current,
           total_ms: total,
-          is_echo: false,
+          // A re-queued slot is a repeat: tell the server so it logs an echo and
+          // leaves the schedule where the first rating put it.
+          is_echo: Boolean(cardBefore._isEcho),
         });
-        history.current.push({ index: indexAt, card: cardBefore, queued: Boolean(result.queued) });
+
+        const againCount = cardBefore._againCount ?? 0;
+
+        // Decide whether this answer earns a repeat slot further down the queue.
+        let offset = 0;
+        let requeue = null;
+        if (rating === RATINGS.Again && againCount < AGAIN_REQUEUE_LIMIT) {
+          offset = randomBetween(AGAIN_REQUEUE_MIN, AGAIN_REQUEUE_MAX);
+          requeue = "again";
+        } else if (result.shaky && !cardBefore._shakyDone) {
+          offset = randomBetween(SHAKY_REQUEUE_MIN, SHAKY_REQUEUE_MAX);
+          requeue = "echo";
+        }
+
+        const answered = {
+          ...cardBefore,
+          reviewed: true,
+          last_rating: rating,
+          state: result.state?.state ?? cardBefore.state,
+          due: result.state?.due ?? cardBefore.due,
+          stability: result.state?.stability ?? cardBefore.stability,
+          difficulty: result.state?.difficulty ?? cardBefore.difficulty,
+          reps: result.state?.reps ?? cardBefore.reps,
+          lapses: result.state?.lapses ?? cardBefore.lapses,
+          struggle_score:
+            typeof result.struggle_score === "number"
+              ? result.struggle_score
+              : cardBefore.struggle_score,
+          _againCount: requeue === "again" ? againCount + 1 : againCount,
+          _shakyDone: Boolean(cardBefore._shakyDone || result.shaky),
+        };
+
+        const nextQueue = queue.map((card, i) => (i === indexAt ? answered : card));
+
+        let insertedKey = null;
+        if (requeue) {
+          const slot = {
+            ...cardBefore,
+            reviewed: false,
+            _key: makeKey(),
+            _isEcho: true,
+            _againCount: answered._againCount,
+            _shakyDone: answered._shakyDone,
+            _requeue: requeue,
+          };
+          const at = Math.min(indexAt + offset + 1, nextQueue.length);
+          nextQueue.splice(at, 0, slot);
+          insertedKey = slot._key;
+        }
+
+        history.current.push({
+          index: indexAt,
+          card: cardBefore,
+          queued: Boolean(result.queued),
+          insertedKey,
+        });
         setCanUndo(true);
-        setQueue((prev) =>
-          prev.map((card, i) =>
-            i === indexAt
-              ? {
-                  ...card,
-                  reviewed: true,
-                  last_rating: rating,
-                  state: result.state?.state ?? card.state,
-                  due: result.state?.due ?? card.due,
-                  stability: result.state?.stability ?? card.stability,
-                  difficulty: result.state?.difficulty ?? card.difficulty,
-                  reps: result.state?.reps ?? card.reps,
-                  lapses: result.state?.lapses ?? card.lapses,
-                }
-              : card
-          )
-        );
+        setQueue(nextQueue);
         if (result.queued) notify("Saved offline — it will sync when you reconnect.");
+        if (result.leech) setLeechCard(cardBefore);
         setRevealed(false);
-        const next = queue.findIndex((card, i) => i > indexAt && !card.reviewed);
-        setIndex(next === -1 ? queue.length : next);
+
+        const next = nextQueue.findIndex((card, i) => i > indexAt && !card.reviewed);
+        setIndex(next === -1 ? nextQueue.length : next);
         // Answering the last outstanding card closes the sitting.
         if (next === -1) finish();
       } catch (err) {
@@ -256,22 +339,30 @@ export default function StudyPage() {
   );
 
   // Undo the most recent answer: step back to that card, restore it as
-  // unanswered, and (when the answer never reached the server) drop it from the
-  // offline queue. Re-answering a card the server already recorded is logged as
-  // an echo, so it never double-counts the sitting.
+  // unanswered, remove any repeat slot the answer had scheduled, and (when the
+  // answer never reached the server) drop it from the offline queue. Re-answering
+  // a card the server already recorded is logged as an echo, so it never
+  // double-counts the sitting.
   const undo = useCallback(() => {
     const last = history.current.pop();
     if (!last) return;
     if (last.queued) dropLastQueuedReview();
-    setQueue((prev) => prev.map((card, i) => (i === last.index ? last.card : card)));
+    setQueue((prev) => {
+      const out = [];
+      for (const card of prev) {
+        if (last.insertedKey != null && card._key === last.insertedKey) continue;
+        out.push(card._key === last.card._key ? last.card : card);
+      }
+      return out;
+    });
     setSummary(null);
     setRevealed(false);
     setIndex(last.index);
     setCanUndo(history.current.length > 0);
   }, []);
 
-  // Keyboard: space/enter reveals, 1-4 rate. Ignored while typing in a field so
-  // a stray key in another input never answers a card.
+  // Keyboard: space/enter reveals, 1-4 rate, u undoes. Ignored while typing in a
+  // field so a stray key in another input never answers a card.
   useEffect(() => {
     function onKey(event) {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -281,6 +372,13 @@ export default function StudyPage() {
         if (!revealed) {
           event.preventDefault();
           reveal();
+        }
+        return;
+      }
+      if (event.key === "u" || event.key === "U") {
+        if (canUndo) {
+          event.preventDefault();
+          undo();
         }
         return;
       }
@@ -353,6 +451,13 @@ export default function StudyPage() {
     const total = summary.total ?? completed;
     const accuracy =
       typeof summary.accuracy === "number" ? Math.round(summary.accuracy * 100) : null;
+    const focus = summary.focus ?? focusMeta;
+    const leftoverDue =
+      typeof summary.leftover_due === "number"
+        ? summary.leftover_due
+        : typeof focus?.leftover_due === "number"
+          ? focus.leftover_due
+          : null;
     return (
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="card p-8 text-center">
@@ -389,6 +494,20 @@ export default function StudyPage() {
               <div className="text-xs text-ink/50">Struggling</div>
             </div>
           </div>
+
+          {leftoverDue !== null && (
+            <div className="mt-4 rounded-xl border border-ink/10 bg-white/5 p-3 text-sm text-ink/70">
+              {leftoverDue > 0 ? (
+                <>
+                  <span className="font-semibold text-ink">{leftoverDue}</span>{" "}
+                  {leftoverDue === 1 ? "due card is" : "due cards are"} still waiting — run
+                  another focus session when you have a minute.
+                </>
+              ) : (
+                <>You caught up on everything due in this deck. 🎯</>
+              )}
+            </div>
+          )}
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
@@ -479,15 +598,23 @@ export default function StudyPage() {
 
       <div className="flex flex-1 flex-col">
         <div
+          key={current._key ?? current.id}
           className="card flex min-h-[18rem] flex-1 touch-pan-y flex-col justify-center p-6 sm:p-8"
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
-          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/40">
-            {revealed ? "Answer" : "Question"}
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wide text-ink/40">
+              {revealed ? "Answer" : "Question"}
+            </span>
+            {current._isEcho && (
+              <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                {current._requeue === "echo" ? "Revisit" : "Again"}
+              </span>
+            )}
           </div>
           <div className="text-lg leading-relaxed text-ink">
-            <Viewer card={current} face={face} autoPlay={revealed} />
+            <Viewer card={current} face={face} autoPlay={revealed && settings.audio_autoplay !== false} />
           </div>
         </div>
 
@@ -534,6 +661,57 @@ export default function StudyPage() {
           Undo last answer
         </button>
       </div>
+
+      {/* A leech (too many lapses) is suspended; offer to rewrite it. */}
+      {leechCard && !leechEditing && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/40 p-4">
+          <div className="card w-full max-w-md p-6 text-center">
+            <div className="text-4xl">🧟</div>
+            <h2 className="mt-3 font-display text-xl font-semibold text-ink">Rewrite this card?</h2>
+            <p className="mt-2 text-sm text-ink/60">
+              This card has slipped {leechCard.lapses ?? 0} times and has been suspended so it
+              stops clogging your queue. A clearer prompt — or splitting it in two — usually
+              unsticks it.
+            </p>
+            <div className="mt-6 flex justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setLeechCard(null)}
+                className="rounded-xl border border-ink/15 px-4 py-2 text-sm font-semibold text-ink/70 transition hover:bg-white/5"
+              >
+                Not now
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeechEditing(true)}
+                className="rounded-xl bg-lavender px-4 py-2 text-sm font-semibold text-on-accent transition hover:bg-lavender-deep"
+              >
+                Rewrite
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {leechEditing && leechCard && (
+        <Suspense fallback={null}>
+          <CardEditorModal
+            key={`leech-editor-${leechCard.id}`}
+            open
+            card={leechCard}
+            categoryId={leechCard.category_id}
+            onClose={() => {
+              setLeechEditing(false);
+              setLeechCard(null);
+            }}
+            onSaved={() => {
+              notify("Card updated.");
+              setLeechEditing(false);
+              setLeechCard(null);
+            }}
+          />
+        </Suspense>
+      )}
 
       <Toast toasts={toasts} onDismiss={dismiss} />
     </div>

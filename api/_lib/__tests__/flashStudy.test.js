@@ -9,8 +9,13 @@ import {
   settingsFromRows,
   summarizeRatings,
   planReview,
+  SESSION_MODES,
 } from "../flashStudy.js";
-import { DEFAULT_SETTINGS, RATINGS } from "../../../src/modules/flashcards/lib/scheduler/index.js";
+import {
+  DEFAULT_SETTINGS,
+  RATINGS,
+  exponentialMovingAverage,
+} from "../../../src/modules/flashcards/lib/scheduler/index.js";
 
 // The study flow reuses the client's pure scheduler on the server. These cover
 // the thin server-side wrapper (settings mapping, focus sizing, the review plan)
@@ -134,6 +139,75 @@ describe("planReview", () => {
       })
     ).toThrow();
   });
+
+  it("flags a correct-but-slow answer as shaky against the baseline", () => {
+    const base = { card_type: "basic", state: 2, reps: 3, lapses: 0, baseline_ms: 4000, recent: [] };
+    const fast = planReview({ context: base, rating: "good", thinkMs: 2000, now, settings: {} });
+    const slow = planReview({ context: base, rating: "good", thinkMs: 9000, now, settings: {} });
+    expect(fast.shaky).toBe(false);
+    expect(slow.shaky).toBe(true);
+    // Only Good counts; a slow Hard is not a "shaky correct".
+    const hard = planReview({ context: base, rating: "hard", thinkMs: 9000, now, settings: {} });
+    expect(hard.shaky).toBe(false);
+  });
+
+  it("honours the slow-answer ratio setting", () => {
+    const base = { card_type: "basic", state: 2, reps: 3, lapses: 0, baseline_ms: 4000, recent: [] };
+    // A 1.5x answer is shaky at a 1.2 threshold but not at a 2.0 one.
+    const strict = planReview({ context: base, rating: "good", thinkMs: 6000, now, settings: { struggle_slow_ratio: 1.2 } });
+    const lenient = planReview({ context: base, rating: "good", thinkMs: 6000, now, settings: { struggle_slow_ratio: 2 } });
+    expect(strict.shaky).toBe(true);
+    expect(lenient.shaky).toBe(false);
+  });
+
+  it("auto-downgrades a shaky Good to Hard when enabled", () => {
+    const base = { card_type: "basic", state: 2, reps: 3, lapses: 0, baseline_ms: 4000, recent: [] };
+    const on = planReview({
+      context: base,
+      rating: "good",
+      thinkMs: 9000,
+      now,
+      settings: { auto_downgrade_shaky_correct: true },
+    });
+    expect(on.downgraded).toBe(true);
+    expect(on.rating).toBe(RATINGS.Hard);
+    expect(on.shaky).toBe(false);
+    // A fast Good is left alone.
+    const fast = planReview({
+      context: base,
+      rating: "good",
+      thinkMs: 2000,
+      now,
+      settings: { auto_downgrade_shaky_correct: true },
+    });
+    expect(fast.downgraded).toBe(false);
+    expect(fast.rating).toBe(RATINGS.Good);
+  });
+
+  it("moves avg_think_ms as an exponential moving average", () => {
+    const plan = planReview({
+      context: { card_type: "basic", state: 2, reps: 5, lapses: 0, avg_think_ms: 10000, recent: [] },
+      rating: "good",
+      thinkMs: 5000,
+      now,
+      settings: {},
+    });
+    // 0.3 * 5000 + 0.7 * 10000 = 8500
+    expect(plan.avgThinkMs).toBe(8500);
+  });
+});
+
+describe("exponentialMovingAverage", () => {
+  it("seeds from the first sample and then blends", () => {
+    expect(exponentialMovingAverage(null, 5000)).toBe(5000);
+    expect(exponentialMovingAverage(10000, 5000)).toBe(8500);
+  });
+
+  it("leaves the previous value when the sample is unusable", () => {
+    expect(exponentialMovingAverage(8000, undefined)).toBe(8000);
+    expect(exponentialMovingAverage(8000, -1)).toBe(8000);
+    expect(exponentialMovingAverage(null, undefined)).toBe(null);
+  });
 });
 
 describe("cardStateFromRow", () => {
@@ -143,8 +217,15 @@ describe("cardStateFromRow", () => {
   });
 });
 
-describe("candidateQuery", () => {
-  it("scopes a tag with an array-containment filter", () => {
+describe("SESSION_MODES", () => {
+  it("includes the struggle mode used by the stats screen", () => {
+    expect(SESSION_MODES.has("struggle")).toBe(true);
+    expect(SESSION_MODES.has("struggling")).toBe(true);
+    expect(SESSION_MODES.has("bogus")).toBe(false);
+  });
+});
+
+describe("candidateQuery", () => {  it("scopes a tag with an array-containment filter", () => {
     const query = candidateQuery({ uid: "u", scopeType: "tag", tag: "grammar", mode: "due" });
     expect(query.text).toContain("c.tags @> ARRAY[$2]::text[]");
     expect(query.params).toEqual(["u", "grammar"]);
@@ -152,6 +233,29 @@ describe("candidateQuery", () => {
 
   it("scopes a folder to its categories", () => {
     const query = candidateQuery({ uid: "u", scopeType: "folder", scopeId: 7, mode: "due" });
+    expect(query.text).toContain("folder_id = $2");
+    expect(query.params).toEqual(["u", 7]);
+  });
+
+  it("does not apply the due-date cut-off for focus (the builder buckets it)", () => {
+    const query = candidateQuery({ uid: "u", scopeType: "folder", scopeId: 7, mode: "focus" });
+    expect(query.text).not.toContain("date_trunc('day', now())");
+    // It still carries the columns the focus builder reads.
+    expect(query.text).toContain("s.struggle_score");
+    expect(query.text).toContain("s.last_seen_session");
+    expect(query.text).toContain("c.category_id");
+  });
+
+  it("orders struggle mode hardest-first with no threshold or due cut-off", () => {
+    const query = candidateQuery({ uid: "u", scopeType: "all", mode: "struggle" });
+    expect(query.text).toContain("ORDER BY s.struggle_score DESC NULLS LAST");
+    expect(query.text).not.toContain("s.struggle_score >= ");
+    expect(query.text).not.toContain("date_trunc('day', now())");
+    expect(query.params).toEqual(["u"]);
+  });
+
+  it("scopes struggle mode to a folder", () => {
+    const query = candidateQuery({ uid: "u", scopeType: "folder", scopeId: 7, mode: "struggle" });
     expect(query.text).toContain("folder_id = $2");
     expect(query.params).toEqual(["u", 7]);
   });

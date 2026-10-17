@@ -27,14 +27,16 @@ import {
   translateStroke,
 } from "../lib/ink";
 import {
-  canvasToPngBlob,
   drawAll,
   drawFreehand,
   drawStroke,
   paintBackground,
   renderToCanvas,
 } from "../lib/inkRender";
-import { uploadMediaBlob } from "../lib/media";
+import { compressImage } from "../lib/image";
+import { loadImageQuality } from "../lib/imageQuality";
+import { prepareImage } from "../lib/imageProcessing/index";
+import { removeMediaPaths, uploadMediaBlob } from "../lib/media";
 
 // Full handwriting editor for an ink block.
 //
@@ -125,6 +127,12 @@ export default function InkBlockEditor({ block, onChange, onRemove, disabled = f
   const previewTimerRef = useRef(null);
   const rafRef = useRef(0);
   const fileRef = useRef(null);
+  // Object paths uploaded during this editing session, so a superseded preview
+  // (or background image) can be removed from the bucket instead of lingering.
+  // Preview and background are tracked separately - replacing one must not
+  // delete the other.
+  const sessionPreviewPathsRef = useRef([]);
+  const sessionBgPathsRef = useRef([]);
 
   useEffect(() => {
     strokesRef.current = strokes;
@@ -246,21 +254,30 @@ export default function InkBlockEditor({ block, onChange, onRemove, disabled = f
         image: bgImageElRef.current,
         scale: PREVIEW_SCALE,
       });
-      const blob = await canvasToPngBlob(canvas);
-      const uploaded = await uploadMediaBlob(blob, {
-        kind: "ink",
-        filename: "ink.png",
-        mime: "image/png",
+      // An ink preview is re-encoded losslessly to WebP: handwriting and fine
+      // diagram edges are exactly what a lossy codec would smear (plan.js rule 3).
+      const prepared = await prepareImage(canvas, { sourceKind: "ink" });
+      const uploaded = await uploadMediaBlob(prepared.blob, {
+        kind: "image",
+        filename: "ink.webp",
+        mime: prepared.mime,
+        hash: prepared.hash,
       });
+      // A preview from earlier in this session is now superseded; drop it.
+      if (sessionPreviewPathsRef.current.length) {
+        removeMediaPaths(sessionPreviewPathsRef.current).catch(() => {});
+      }
+      sessionPreviewPathsRef.current = uploaded.path ? [uploaded.path] : [];
       setUploadError(null);
       onChange?.({
         preview: {
           url: uploaded.url,
-          pathname: uploaded.pathname,
+          path: uploaded.path,
           mime: uploaded.mime,
           bytes: uploaded.bytes,
-          width,
-          height,
+          hash: uploaded.hash ?? prepared.hash ?? null,
+          width: prepared.width,
+          height: prepared.height,
         },
       });
     } catch (err) {
@@ -739,18 +756,26 @@ export default function InkBlockEditor({ block, onChange, onRemove, disabled = f
     if (!file || disabled) return;
     setUploadError(null);
     try {
-      const uploaded = await uploadMediaBlob(file, {
+      const quality = await loadImageQuality();
+      const prepared = await compressImage(file, { quality });
+      const uploaded = await uploadMediaBlob(prepared.blob, {
         kind: "image",
         filename: file.name,
-        mime: file.type || "image/png",
+        mime: prepared.mime,
+        hash: prepared.hash,
       });
+      if (sessionBgPathsRef.current.length) {
+        removeMediaPaths(sessionBgPathsRef.current).catch(() => {});
+      }
+      sessionBgPathsRef.current = uploaded.path ? [uploaded.path] : [];
       onChange?.({
         background: "image",
         bgImage: {
           url: uploaded.url,
-          pathname: uploaded.pathname,
+          path: uploaded.path,
           mime: uploaded.mime,
           bytes: uploaded.bytes,
+          hash: uploaded.hash ?? prepared.hash ?? null,
         },
       });
     } catch (err) {

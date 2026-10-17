@@ -1,7 +1,7 @@
 import sql from "../../_lib/db.js";
 import { requireAuth } from "../../_lib/auth.js";
 import { flashUserId, parsePositiveInt, sendMissingFlashTable } from "../../_lib/flashCards.js";
-import { SESSION_CARDS_SQL, settingsFromRows } from "../../_lib/flashStudy.js";
+import { SESSION_CARDS_SQL, SELECT_FOCUS_META_SQL, focusMetaFromRow, settingsFromRows } from "../../_lib/flashStudy.js";
 
 // GET    /api/flash/sessions/:id - the session, its ordered queue and the
 //                                  scheduler settings the client needs to
@@ -55,10 +55,20 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "session not found" });
     }
 
+    // A focus session also carries what the builder decided (pool counts and the
+    // leftover-due count). Only read for focus, so a database that predates
+    // db/flash_003.sql still serves every other mode.
+    let focus = null;
+    if (sessionRows[0].mode === "focus") {
+      const metaRows = await sql.query(SELECT_FOCUS_META_SQL, [sessionId, uid]);
+      focus = focusMetaFromRow(metaRows[0]);
+    }
+
     return res.status(200).json({
       session: sessionRows[0],
       cards,
       settings: settingsFromRows(settingRows),
+      ...(focus ? { focus, leftover_due: focus.leftover_due } : {}),
     });
   } catch (err) {
     if (sendMissingFlashTable(res, err)) return;

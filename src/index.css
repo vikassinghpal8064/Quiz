@@ -1158,3 +1158,76 @@ html.dark #theme-toggle .icon-moon {
   content-visibility: auto;
   contain-intrinsic-size: auto 340px;
 }
+
+/* ============================================================
+   Flash settings: range sliders + pen-friendly touch targets
+   ============================================================ */
+
+/* Native range input, themed to the lavender accent. Track + thumb are
+   styled per-engine (WebKit/Blink and Firefox). */
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+}
+
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--color-lavender);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--color-lavender);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.range:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 108, 230, 0.35);
+}
+
+/* Coarse pointers (tablet / stylus / touch): grow the draggable area and the
+   tap targets inside the settings panel, without changing mouse layouts. */
+@media (pointer: coarse) {
+  .range {
+    height: 10px;
+  }
+
+  .range::-webkit-slider-thumb {
+    width: 26px;
+    height: 26px;
+  }
+
+  .settings-panel button,
+  .settings-panel [role="switch"],
+  .settings-panel [role="radio"] {
+    min-height: 44px;
+  }
+
+  .settings-panel .range {
+    padding-block: 0.35rem;
+  }
+
+  /* Quiz answers and filter pills get roomier hit areas for a stylus finger. */
+  .quiz-option {
+    min-height: 56px;
+  }
+
+  .filter-pill {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}

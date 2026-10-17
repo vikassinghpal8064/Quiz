@@ -12,17 +12,26 @@
 
 import {
   DEFAULT_SETTINGS,
+  DEFAULT_STRUGGLE_WEIGHTS,
   RATINGS,
   STATES,
   schedule,
   previewIntervals,
   getRetrievability,
   computeStruggleScore,
+  computeBaseline,
+  exponentialMovingAverage,
+  isShakyCorrect,
   normalizeRating,
 } from "../../src/modules/flashcards/lib/scheduler/index.js";
+import { buildFocusQueue, focusTarget } from "../../src/modules/flashcards/lib/sessionBuilder.js";
 import { STRUGGLE_THRESHOLD } from "./flashCards.js";
 
-export { RATINGS, STATES };
+export { RATINGS, STATES, buildFocusQueue, focusTarget };
+
+// A correct answer slower than this multiple of the card-type baseline is
+// "shaky": recalled, but not confidently. Feeds the study screen's echo re-queue.
+export const SHAKY_RATIO = 2;
 
 // A study sitting studies one scope. "all" ignores the scope filter; "folder"
 // and "category" resolve to a set of categories (a folder's categories, or a
@@ -34,8 +43,11 @@ export const SESSION_SCOPES = new Set(["folder", "category", "tag", "all"]);
 // "due"  - reviewable today (new + due), the default.
 // "focus" - a short, bounded slice of the due queue (settings.focus_*).
 // "struggling" - only cards whose struggle_score has crossed the threshold.
+// "struggle" - every unsuspended card in scope, hardest first (no threshold),
+//              so "Study these now" works through exactly the Hardest Cards
+//              list and then the next hardest.
 // "all"  - every unsuspended card, ignoring due dates.
-export const SESSION_MODES = new Set(["due", "focus", "struggling", "all"]);
+export const SESSION_MODES = new Set(["due", "focus", "struggling", "struggle", "all"]);
 
 // The queue is built server-side, so bound it. A due queue longer than this is
 // truncated (a fresh session refills it); 500 is far more than anyone reviews
@@ -51,7 +63,14 @@ export const DEFAULT_SESSION_CARDS = 100;
 export function settingsFromRows(rows) {
   const settings = { ...DEFAULT_SETTINGS };
   for (const row of rows ?? []) {
-    if (row && typeof row.key === "string") settings[row.key] = row.value;
+    if (!row || typeof row.key !== "string") continue;
+    // struggle_weights is an object; merge it over the defaults so a partial
+    // stored object (or a PATCH of a single weight) still reads back complete.
+    if (row.key === "struggle_weights" && row.value && typeof row.value === "object" && !Array.isArray(row.value)) {
+      settings.struggle_weights = { ...DEFAULT_STRUGGLE_WEIGHTS, ...row.value };
+      continue;
+    }
+    settings[row.key] = row.value;
   }
   return settings;
 }
@@ -61,21 +80,12 @@ export async function loadSettings(sql, uid) {
   return settingsFromRows(rows);
 }
 
-// A short focus session: a fraction of what is due, floored at focus_min and
-// capped at focus_max. Never invents cards - an empty queue stays empty.
-export function focusLimit(dueCount, settings = {}) {
-  const count = Math.max(0, Number(dueCount) || 0);
-  if (count === 0) return 0;
-  const fraction = numberOr(settings.focus_fraction, DEFAULT_SETTINGS.focus_fraction);
-  const min = numberOr(settings.focus_min, DEFAULT_SETTINGS.focus_min);
-  const max = numberOr(settings.focus_max, DEFAULT_SETTINGS.focus_max);
-  const target = Math.round(count * fraction);
-  return Math.min(count, Math.max(min, Math.min(max, target)));
-}
-
-function numberOr(value, fallback) {
-  const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? n : fallback;
+// A short focus session: a fraction of the deck's active cards, floored at
+// focus_min and capped at focus_max. Never invents cards - an empty queue stays
+// empty. Kept as a thin alias of sessionBuilder.focusTarget so the sizing rule
+// lives in exactly one place (the builder also caps N at the deck size).
+export function focusLimit(activeCount, settings = {}) {
+  return focusTarget(activeCount, settings);
 }
 
 // ---------- queue ----------
@@ -123,18 +133,26 @@ export function candidateQuery({ uid, scopeType, scopeId, tag, mode }) {
     params.push(STRUGGLE_THRESHOLD);
     where.push(`s.struggle_score >= $${params.length}`);
     order = "s.struggle_score DESC NULLS LAST, c.id ASC";
-  } else if (mode === "all") {
+  } else if (mode === "struggle") {
+    // Hardest first, no threshold: the queue mirrors the Hardest Cards table
+    // (order only), so "Study these now" begins with the same cards the user
+    // just saw and keeps going down the list.
+    order = "s.struggle_score DESC NULLS LAST, c.id ASC";
+  } else if (mode === "all" || mode === "focus") {
+    // The focus builder buckets everything itself (due / struggle / new /
+    // coverage), so it needs the whole active deck, not just what is due today.
     order = "c.id ASC";
   } else {
-    // due + focus: reviewable today. New cards are created with due = now(), so
-    // they are included here.
+    // due: reviewable today. New cards are created with due = now(), so they are
+    // included here.
     where.push(`(s.due IS NULL OR s.due < date_trunc('day', now()) + interval '1 day')`);
     order = "s.due ASC NULLS FIRST, c.id ASC";
   }
 
   return {
-    text: `SELECT c.id, c.tags,
-             s.state, s.due, s.stability, s.difficulty, s.reps, s.lapses, s.last_review
+    text: `SELECT c.id, c.tags, c.category_id,
+             s.state, s.due, s.stability, s.difficulty, s.reps, s.lapses, s.last_review,
+             s.struggle_score, s.avg_think_ms, s.last_seen_session
       FROM fc_cards c
       LEFT JOIN fc_card_state s ON s.card_id = c.id
       WHERE ${where.join(" AND ")}
@@ -200,9 +218,12 @@ export function newCapRemaining(settings = {}, introducedToday = 0) {
   return Math.max(0, cap - (Number(introducedToday) || 0));
 }
 
-// Create the session row and its ordered queue in one statement. Parameters:
+// Create the session row and its ordered queue in one statement. Each queued
+// card carries its own reason label (why it earned a slot), so a focus session
+// can record due / struggle / new / stale per card while the other modes pass
+// the same label for every row. Parameters:
 //   $1 user_id  $2 scope_type  $3 scope_id  $4 mode  $5 fraction
-//   $6 planned_count  $7 reason  $8 card_ids::int[]
+//   $6 planned_count  $7 card_ids::int[]  $8 reasons::text[]
 export const CREATE_SESSION_SQL = `
   WITH created AS (
     INSERT INTO fc_sessions (user_id, scope_type, scope_id, mode, fraction, planned_count)
@@ -210,15 +231,20 @@ export const CREATE_SESSION_SQL = `
     RETURNING *
   ), queue AS (
     INSERT INTO fc_session_cards (user_id, session_id, card_id, position, reason)
-    SELECT $1, created.id, item.card_id, (item.ord - 1)::int, $7
-    FROM created, unnest($8::int[]) WITH ORDINALITY AS item(card_id, ord)
+    SELECT $1, created.id, item.card_id, (item.ord - 1)::int, item.reason
+    FROM created, unnest($7::int[], $8::text[]) WITH ORDINALITY AS item(card_id, reason, ord)
     RETURNING session_id
   )
   SELECT created.*, (SELECT count(*) FROM queue)::int AS queued
   FROM created
 `;
 
-export function createSessionArgs({ uid, scopeType, scopeId, mode, fraction, plannedCount, reason, cardIds }) {
+export function createSessionArgs({ uid, scopeType, scopeId, mode, fraction, plannedCount, reason, reasons, cardIds }) {
+  const ids = cardIds ?? [];
+  // Fall back to one shared label (tag scope keeps its "tag:<name>" marker).
+  const labels = Array.isArray(reasons) && reasons.length === ids.length
+    ? reasons
+    : ids.map(() => reason ?? mode ?? null);
   return [
     uid,
     scopeType,
@@ -226,16 +252,69 @@ export function createSessionArgs({ uid, scopeType, scopeId, mode, fraction, pla
     mode,
     fraction ?? null,
     plannedCount,
-    reason ?? null,
-    cardIds,
+    ids,
+    labels,
   ];
+}
+
+// One row per focus session, holding what the builder decided: the target N,
+// how many slots each pool claimed, and how many due cards were left over.
+// Non-focus sessions never write here. Parameters:
+//   $1 user_id  $2 session_id  $3 target  $4 due  $5 struggle  $6 new
+//   $7 stale  $8 leftover_due
+export const INSERT_FOCUS_META_SQL = `
+  INSERT INTO fc_session_focus (
+    user_id, session_id, target_count, due_count, struggle_count, new_count, stale_count, leftover_due
+  )
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+  ON CONFLICT (session_id) DO UPDATE SET
+    target_count = EXCLUDED.target_count,
+    due_count = EXCLUDED.due_count,
+    struggle_count = EXCLUDED.struggle_count,
+    new_count = EXCLUDED.new_count,
+    stale_count = EXCLUDED.stale_count,
+    leftover_due = EXCLUDED.leftover_due
+  RETURNING *
+`;
+
+export function insertFocusMetaArgs(uid, sessionId, meta = {}) {
+  return [
+    uid,
+    sessionId,
+    Math.max(0, Number(meta.target) || 0),
+    Math.max(0, Number(meta.due) || 0),
+    Math.max(0, Number(meta.struggle) || 0),
+    Math.max(0, Number(meta.new) || 0),
+    Math.max(0, Number(meta.stale) || 0),
+    Math.max(0, Number(meta.leftover_due) || 0),
+  ];
+}
+
+// The focus metadata for one session (only ever read for mode = focus).
+export const SELECT_FOCUS_META_SQL = `
+  SELECT target_count, due_count, struggle_count, new_count, stale_count, leftover_due
+  FROM fc_session_focus
+  WHERE session_id = $1 AND user_id = $2
+`;
+
+// Map a focus-meta row (or nothing) into the summary shape the client reads.
+export function focusMetaFromRow(row) {
+  if (!row) return null;
+  return {
+    target: Number(row.target_count) || 0,
+    due: Number(row.due_count) || 0,
+    struggle: Number(row.struggle_count) || 0,
+    new: Number(row.new_count) || 0,
+    stale: Number(row.stale_count) || 0,
+    leftover_due: Number(row.leftover_due) || 0,
+  };
 }
 
 // One row per queued card, joined to its content and its scheduler state, in the
 // order the session will work through it. `reviewed` lets a resumed session skip
 // (or highlight) cards already answered.
 export const SESSION_CARDS_SQL = `
-  SELECT c.id, c.card_type, c.front, c.back, c.tags, c.suspended, c.source, c.source_ref,
+  SELECT c.id, c.card_type, c.front, c.back, c.tags, c.category_id, c.suspended, c.source, c.source_ref,
          s.state, s.due, s.stability, s.difficulty, s.reps, s.lapses, s.last_review, s.struggle_score,
          sc.position, sc.reason,
          EXISTS (
@@ -258,10 +337,12 @@ export const SESSION_CARDS_SQL = `
 // ---------- review ----------
 
 // A card's state, its type and its recent history, in one round trip. The
-// `recent` sub-select feeds the struggle score.
+// `recent` sub-select feeds the struggle score; `baseline_ms` is the user's
+// per-card-type median think time for correct answers (the "normal" speed for
+// this kind of card), used for the struggle score and the shaky-correct echo.
 export const REVIEW_CONTEXT_SQL = `
   SELECT c.card_type, s.state, s.due, s.stability, s.difficulty, s.reps, s.lapses,
-         s.last_review, s.avg_think_ms,
+         s.last_review, s.avg_think_ms, s.struggle_score,
          EXISTS (
            SELECT 1 FROM fc_session_cards sc
            WHERE sc.session_id = $3 AND sc.card_id = c.id AND sc.user_id = $2
@@ -270,6 +351,13 @@ export const REVIEW_CONTEXT_SQL = `
            SELECT 1 FROM fc_review_logs r
            WHERE r.session_id = $3 AND r.card_id = c.id
          ) AS already_reviewed,
+         COALESCE((
+           SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY r.think_ms)
+           FROM fc_review_logs r
+           JOIN fc_cards rc ON rc.id = r.card_id
+           WHERE r.user_id = $2 AND rc.card_type = c.card_type
+             AND r.rating >= 3 AND r.think_ms IS NOT NULL AND r.think_ms > 0
+         ), 0) AS baseline_ms,
          COALESCE((
            SELECT json_agg(recent)
            FROM (
@@ -308,34 +396,71 @@ export function previewFor(stateRow, now, settings = {}) {
 }
 
 // Compute everything a review writes: the next state, the refreshed struggle
-// score and the rolling average think-time. Pure except for reading the values
+// score and the moving-average think-time. Pure except for reading the values
 // it is handed, so it can be unit-tested.
 export function planReview({ context, rating, thinkMs, now = new Date(), settings = {} }) {
   const before = cardStateFromRow(context);
   const grade = normalizeRating(rating);
-  const after = schedule(before, grade, now, settings);
 
   const list = Array.isArray(context?.recent) ? context.recent : [];
+  const baseline = resolveBaseline(context, list);
+  const sample = typeof thinkMs === "number" && Number.isFinite(thinkMs) ? thinkMs : undefined;
+
+  // "Shaky" = correct but markedly slower than the card-type baseline. The
+  // threshold is the user's slow-answer ratio (settings.struggle_slow_ratio),
+  // falling back to SHAKY_RATIO when unset.
+  const slowRatio = positiveNumber(settings?.struggle_slow_ratio) ?? SHAKY_RATIO;
+  const shaky = grade === RATINGS.Good && isShakyCorrect(grade, sample, baseline, slowRatio);
+
+  // Auto-downgrade: turn a shaky Good into a Hard for scheduling (and log it as
+  // Hard so the schedule and the history agree), which brings the card back
+  // sooner. With it on, there is no separate echo pass.
+  const downgrade = shaky && settings?.auto_downgrade_shaky_correct === true;
+  const effectiveGrade = downgrade ? RATINGS.Hard : grade;
+  const after = schedule(before, effectiveGrade, now, settings);
+
   const struggleScore = computeStruggleScore({
     reviews: list,
-    thinkMs: typeof thinkMs === "number" ? thinkMs : undefined,
+    thinkMs: sample,
     lapses: after.lapses,
     cardType: context?.card_type,
+    baseline,
     settings,
   });
 
   return {
     before,
     after,
-    rating: grade,
+    rating: effectiveGrade,
     struggleScore,
-    avgThinkMs: rollingAverage(context?.avg_think_ms, context?.reps, thinkMs),
+    baseline,
+    // A correct-but-slow answer is "shaky": the study screen re-queues it once as
+    // an echo so it comes back around, without moving the schedule. A downgraded
+    // answer is already scheduled as Hard, so it is not echoed.
+    shaky: shaky && !downgrade,
+    downgraded: downgrade,
+    avgThinkMs: exponentialMovingAverage(context?.avg_think_ms, sample),
   };
+}
+
+// A finite, strictly-positive number, or null. Used to guard optional settings.
+function positiveNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+// The card-type baseline: the median think time the database computed for this
+// user and card type, or - when there is no history yet - the median of the
+// card's own recent reviews, and finally DEFAULT_BASELINE_MS.
+function resolveBaseline(context, list) {
+  const fromDb = Number(context?.baseline_ms);
+  if (Number.isFinite(fromDb) && fromDb > 0) return fromDb;
+  return computeBaseline(list, context?.card_type);
 }
 
 // Weighted by the number of prior reps so an early outlier does not dominate.
 // A missing/failed reading leaves the previous average in place (null when there
-// was none).
+// was none). Retained for back-compat / callers that predate the EMA.
 export function rollingAverage(previousAvg, reps, thinkMs) {
   if (typeof thinkMs !== "number" || !Number.isFinite(thinkMs) || thinkMs < 0) {
     return previousAvg ?? null;
@@ -379,6 +504,31 @@ export function updateStateArgs(cardId, plan, sessionId, uid) {
     uid,
   ];
 }
+
+// A repeat answer (a card already rated in this sitting) may still refresh the
+// running averages and the coverage clock, but must NOT move the FSRS schedule:
+// only the first rating per card per session may do that. Parameters:
+//   $1 card_id  $2 avg_think_ms  $3 struggle_score  $4 session_id  $5 user_id
+export const UPDATE_STATE_AVG_SQL = `
+  UPDATE fc_card_state SET
+    avg_think_ms = $2,
+    struggle_score = $3,
+    last_seen_session = $4
+  WHERE card_id = $1 AND user_id = $5
+  RETURNING state, due, stability, difficulty, reps, lapses, struggle_score
+`;
+
+export function updateStateAvgArgs(cardId, plan, sessionId, uid) {
+  return [cardId, plan.avgThinkMs, plan.struggleScore, sessionId, uid];
+}
+
+// Suspend a card once it has lapsed too often (the "leech" case). Parameters:
+//   $1 card_id  $2 user_id
+export const SUSPEND_CARD_SQL = `
+  UPDATE fc_cards SET suspended = true
+  WHERE id = $1 AND user_id = $2
+  RETURNING id, suspended
+`;
 
 export const INSERT_REVIEW_SQL = `
   INSERT INTO fc_review_logs (

@@ -6,29 +6,43 @@ import EmptyState from "../../../components/EmptyState";
 import Toast from "../../../components/Toast";
 import useToast from "../hooks/useToast";
 import useStartSession from "../hooks/useStartSession";
-import { listFolders } from "../lib/api";
+import { listFolders, getStatsOverview } from "../lib/api";
 import { accentClass, folderIcon } from "../lib/format";
 import NewFolderModal from "../components/NewFolderModal";
 import { ErrorState } from "../components/FlashStates";
+import DailyGoalRing from "../components/stats/DailyGoalRing";
 
-// /flash - every folder as a coloured card with its deck size, how many cards
-// are due today, and a per-folder focus-session shortcut.
+// /flash - the daily-goal dashboard, then every folder as a coloured card with
+// its deck size, how many cards are due today, and a per-folder focus-session
+// shortcut.
 export default function FlashHome() {
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [overview, setOverview] = useState(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const { toasts, notify, dismiss } = useToast();
   const startStudySession = useStartSession(notify);
   const [focusBusyId, setFocusBusyId] = useState(null);
 
-  function load() {
+  async function load() {
     setLoading(true);
     setError(null);
-    listFolders()
-      .then(setFolders)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+    setOverviewLoading(true);
+    // The daily-goal panel is a nice-to-have: if its endpoint fails, the folder
+    // grid still loads rather than the whole screen erroring.
+    const [folderRows, stats] = await Promise.all([
+      listFolders().catch((err) => {
+        setError(err.message);
+        return null;
+      }),
+      getStatsOverview().catch(() => null),
+    ]);
+    if (folderRows) setFolders(folderRows);
+    setOverview(stats);
+    setOverviewLoading(false);
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -68,6 +82,10 @@ export default function FlashHome() {
         >
           + New Folder
         </button>
+      </div>
+
+      <div className="mb-8">
+        <DailyGoalRing overview={overview} loading={overviewLoading} />
       </div>
 
       {loading ? (
