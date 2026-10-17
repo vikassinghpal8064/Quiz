@@ -16,37 +16,90 @@
     ui-sans-serif, "SF Pro Display", "Segoe UI", Inter, Roboto,
     "Helvetica Neue", Arial, sans-serif;
 
-  /* Base surfaces */
-  --color-cream: #1b1b1d; /* page background */
-  --color-ink: #ffffff; /* primary text on dark */
-  --color-base: #1b1b1d;
-  --color-surface: #242427;
-  --color-elevated: #2c2c30;
-  --color-sunken: #1f1f22;
-  --color-line: rgba(255, 255, 255, 0.08);
-  --color-muted: #9a9aa3;
+  /* ---- Type scale (one place) ------------------------------------
+     Every text-* utility reads these. Base is 14px; page titles top
+     out around 26-28px; card titles ~16px; meta ~11-12px. */
+  --text-xs: 0.6875rem; /* 11px */
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.8125rem; /* 13px */
+  --text-sm--line-height: 1.45;
+  --text-base: 0.875rem; /* 14px */
+  --text-base--line-height: 1.5;
+  --text-lg: 1rem; /* 16px */
+  --text-lg--line-height: 1.4;
+  --text-xl: 1.0625rem; /* 17px */
+  --text-xl--line-height: 1.35;
+  --text-2xl: 1.25rem; /* 20px */
+  --text-2xl--line-height: 1.3;
+  --text-3xl: 1.5rem; /* 24px */
+  --text-3xl--line-height: 1.25;
+  --text-4xl: 1.625rem; /* 26px - page title */
+  --text-4xl--line-height: 1.2;
+  --text-5xl: 1.875rem; /* 30px */
+  --text-5xl--line-height: 1.15;
+  --text-6xl: 2.125rem; /* 34px */
+  --text-6xl--line-height: 1.1;
+  --text-7xl: 2.5rem;
 
-  /* Pastel accents */
+  /* ---- Radii (compact, professional) ---- */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+
+  /* ---- Colour ----------------------------------------------------
+     Light is the default; html.dark overrides the same names below.
+     --ink-rgb / --accent-rgb are raw triplets used for translucent
+     tints so one rule works in both themes. */
+  --color-cream: #f5f5f7;
+  --color-base: #f5f5f7;
+  --color-surface: #ffffff;
+  --color-elevated: #ffffff;
+  --color-sunken: #ececef;
+  --color-well: #f0f0f3;
+  --color-hover: #ededf1;
+  --color-hover-strong: #e3e3e9;
+  --color-line: rgba(18, 18, 26, 0.1);
+  --color-line-strong: rgba(18, 18, 26, 0.18);
+  --color-ink: #1b1b21;
+  --color-muted: #6a6a74;
+  --color-faint: #8a8a94;
+  --ink-rgb: 27 27 33;
+
+  /* Accent (purple) - the one brand colour we keep. */
+  --color-lavender: #7c6ce6;
+  --color-lavender-deep: #5b4cc9;
+  --color-lavender-soft: #5b4cc9; /* accent *text*: dark enough on white */
+  --color-on-accent: #151517; /* dark text on pastel fills */
+  --accent-rgb: 109 90 224;
+
+  /* Functional pastels (kept pastel: they always pair with dark text). */
   --color-sage: #9cc68b;
   --color-butter: #f6d77e;
   --color-pink: #f3b4c8;
-  --color-lavender: #7c6ce6;
-  --color-lavender-deep: #6a5ad6;
-  --color-lavender-soft: #b7abf2;
-  --color-on-accent: #151517; /* dark text on pastel fills */
+  --warn-rgb: 246 215 126;
+  --danger-rgb: 243 180 200;
+  --sage-rgb: 156 198 139;
 
-  /* Layered soft shadows */
-  --shadow-card:
-    0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 40px -24px rgba(0, 0, 0, 0.75);
-  --shadow-card-hover:
-    0 2px 6px rgba(0, 0, 0, 0.45), 0 30px 64px -26px rgba(0, 0, 0, 0.85);
+  /* Status *text* colours: darker on light, lighter on dark. */
+  --color-warn-ink: #8a6a12;
+  --color-danger-ink: #b2304f;
+  --color-sage-ink: #3f6b32;
+  --color-accent-ink: #4b3bb3;
+
+  /* Elevation: cards are flat; one soft shadow for modals/menus/FAB. */
+  --shadow-card: none;
+  --shadow-menu: 0 10px 30px -12px rgba(15, 15, 25, 0.28);
+  --shadow-modal: 0 24px 60px -24px rgba(15, 15, 25, 0.45);
 }
 
 /* ============================================================
    BASE
    ============================================================ */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html {
@@ -54,8 +107,31 @@ html {
   text-rendering: optimizeLegibility;
 }
 
+/* Dark theme: same token names, dark values. Everything below (utilities
+   and the palette remap) reads these vars, so both themes stay in sync. */
 html.dark {
   color-scheme: dark;
+  --color-cream: #161618;
+  --color-base: #161618;
+  --color-surface: #1f1f22;
+  --color-elevated: #26262a;
+  --color-sunken: #1a1a1d;
+  --color-well: #202024;
+  --color-hover: #2a2a2f;
+  --color-hover-strong: #34343a;
+  --color-line: rgba(255, 255, 255, 0.09);
+  --color-line-strong: rgba(255, 255, 255, 0.16);
+  --color-ink: #f2f2f5;
+  --color-muted: #9a9aa3;
+  --color-faint: #7c7c86;
+  --ink-rgb: 242 242 245;
+  --color-lavender-soft: #b7abf2;
+  --color-warn-ink: #f3d178;
+  --color-danger-ink: #f6c3d3;
+  --color-sage-ink: #bfddb2;
+  --color-accent-ink: #cbc3f7;
+  --shadow-menu: 0 12px 32px -12px rgba(0, 0, 0, 0.8);
+  --shadow-modal: 0 28px 64px -24px rgba(0, 0, 0, 0.85);
 }
 
 body {
@@ -63,7 +139,7 @@ body {
   background-color: var(--color-base);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.5;
   font-weight: 400;
 }
@@ -73,9 +149,9 @@ h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
 }
 
 code {
@@ -87,10 +163,10 @@ code {
   color: #fff;
 }
 
-/* ---- Styled scrollbars ---- */
+/* ---- Styled scrollbars (theme-aware) ---- */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3a3a40 transparent;
+  scrollbar-color: rgb(var(--ink-rgb) / 0.22) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -103,13 +179,13 @@ code {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #34343a;
+  background-color: rgb(var(--ink-rgb) / 0.22);
   border: 3px solid var(--color-base);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #46464d;
+  background-color: rgb(var(--ink-rgb) / 0.34);
 }
 
 /* ---- Focus rings: lavender, everywhere ---- */
@@ -153,34 +229,34 @@ button:not(:disabled):active {
   background-color: var(--color-surface);
 }
 .bg-white\/40 {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgb(var(--ink-rgb) / 0.035);
 }
 .bg-white\/15 {
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: rgb(var(--ink-rgb) / 0.02);
 }
 .bg-stone-50 {
-  background-color: var(--color-sunken);
+  background-color: var(--color-well);
 }
 .bg-stone-100 {
   background-color: var(--color-elevated);
 }
 .bg-stone-200 {
-  background-color: #36363b;
+  background-color: var(--color-hover-strong);
 }
 .bg-stone-200\/70 {
-  background-color: rgba(54, 54, 59, 0.7);
+  background-color: rgb(var(--ink-rgb) / 0.08);
 }
 .hover\:bg-stone-50:hover {
-  background-color: #323237;
+  background-color: var(--color-hover);
 }
 .hover\:bg-stone-100:hover {
-  background-color: #333338;
+  background-color: var(--color-hover);
 }
 .hover\:bg-stone-200:hover {
-  background-color: #3d3d43;
+  background-color: var(--color-hover-strong);
 }
 .disabled\:bg-stone-100:disabled {
-  background-color: var(--color-elevated);
+  background-color: var(--color-well);
 }
 
 /* Neutral translucent layers built from ink */
@@ -188,83 +264,83 @@ button:not(:disabled):active {
   background-color: var(--color-lavender-deep);
 }
 .bg-ink\/5 {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgb(var(--ink-rgb) / 0.05);
 }
 .bg-ink\/10 {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgb(var(--ink-rgb) / 0.08);
 }
 .bg-ink\/50 {
-  background-color: rgba(8, 8, 10, 0.66);
+  background-color: rgba(8, 8, 10, 0.6);
 }
 .hover\:bg-ink\/5:hover {
-  background-color: rgba(255, 255, 255, 0.07);
+  background-color: rgb(var(--ink-rgb) / 0.07);
 }
 .hover\:bg-ink\/10:hover {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: rgb(var(--ink-rgb) / 0.12);
 }
 .hover\:bg-ink\/80:hover {
-  background-color: #5b4cc9;
+  background-color: var(--color-lavender-deep);
 }
 .hover\:bg-ink\/90:hover {
-  background-color: #5b4cc9;
+  background-color: var(--color-lavender-deep);
 }
 
-/* Text: white base, muted scale on dark */
+/* Text: ink base, muted scale, theme-aware in both themes */
 .text-ink {
   color: var(--color-ink);
 }
 .text-ink\/30 {
-  color: rgba(255, 255, 255, 0.42);
+  color: rgb(var(--ink-rgb) / 0.42);
 }
 .text-ink\/35 {
-  color: rgba(255, 255, 255, 0.46);
+  color: rgb(var(--ink-rgb) / 0.46);
 }
 .text-ink\/40 {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(var(--ink-rgb) / 0.5);
 }
 .text-ink\/45 {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgb(var(--ink-rgb) / 0.55);
 }
 .text-ink\/50 {
-  color: rgba(255, 255, 255, 0.58);
+  color: rgb(var(--ink-rgb) / 0.58);
 }
 .text-ink\/55 {
-  color: rgba(255, 255, 255, 0.62);
+  color: rgb(var(--ink-rgb) / 0.62);
 }
 .text-ink\/60 {
-  color: rgba(255, 255, 255, 0.67);
+  color: rgb(var(--ink-rgb) / 0.67);
 }
 .text-ink\/65 {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgb(var(--ink-rgb) / 0.72);
 }
 .text-ink\/70 {
-  color: rgba(255, 255, 255, 0.76);
+  color: rgb(var(--ink-rgb) / 0.76);
 }
 .text-ink\/75 {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgb(var(--ink-rgb) / 0.8);
 }
 .text-ink\/80 {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgb(var(--ink-rgb) / 0.85);
 }
 .placeholder\:text-ink\/35::placeholder {
-  color: rgba(255, 255, 255, 0.42);
+  color: rgb(var(--ink-rgb) / 0.44);
 }
 
 /* Borders/lines from ink */
 .border-ink\/5 {
-  border-color: rgba(255, 255, 255, 0.05);
+  border-color: rgb(var(--ink-rgb) / 0.05);
 }
 .border-ink\/10 {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgb(var(--ink-rgb) / 0.09);
 }
 .border-ink\/15 {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgb(var(--ink-rgb) / 0.12);
 }
 .border-ink\/20 {
-  border-color: rgba(255, 255, 255, 0.13);
+  border-color: rgb(var(--ink-rgb) / 0.16);
 }
 .border-ink\/25 {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgb(var(--ink-rgb) / 0.2);
 }
 
 /* Emerald -> lavender (primary / selection / progress / focus) */
@@ -275,28 +351,28 @@ button:not(:disabled):active {
   background-color: var(--color-lavender-deep);
 }
 .bg-emerald-700 {
-  background-color: #5b4cc9;
+  background-color: var(--color-lavender-deep);
 }
 .bg-emerald-50 {
-  background-color: rgba(124, 108, 230, 0.16);
+  background-color: rgb(var(--accent-rgb) / 0.12);
 }
 .bg-emerald-100 {
-  background-color: rgba(124, 108, 230, 0.24);
+  background-color: rgb(var(--accent-rgb) / 0.18);
 }
 .hover\:bg-emerald-600:hover {
   background-color: var(--color-lavender-deep);
 }
 .hover\:bg-emerald-700:hover {
-  background-color: #5b4cc9;
+  background-color: var(--color-lavender-deep);
 }
 .hover\:bg-emerald-50:hover {
-  background-color: rgba(124, 108, 230, 0.22);
+  background-color: rgb(var(--accent-rgb) / 0.18);
 }
 .text-emerald-50 {
-  color: #edebfc;
+  color: var(--color-accent-ink);
 }
 .text-emerald-100 {
-  color: #e3e0fb;
+  color: var(--color-accent-ink);
 }
 .text-emerald-400 {
   color: var(--color-lavender-soft);
@@ -308,19 +384,19 @@ button:not(:disabled):active {
   color: var(--color-lavender-soft);
 }
 .text-emerald-800 {
-  color: #cbc3f7;
+  color: var(--color-accent-ink);
 }
 .text-emerald-900 {
-  color: #e0dbfb;
+  color: var(--color-accent-ink);
 }
 .text-emerald-950 {
-  color: #ece9fd;
+  color: var(--color-accent-ink);
 }
 .border-emerald-200 {
-  border-color: rgba(124, 108, 230, 0.35);
+  border-color: rgb(var(--accent-rgb) / 0.35);
 }
 .border-emerald-300 {
-  border-color: rgba(124, 108, 230, 0.5);
+  border-color: rgb(var(--accent-rgb) / 0.5);
 }
 .border-emerald-500 {
   border-color: var(--color-lavender);
@@ -341,10 +417,10 @@ button:not(:disabled):active {
   accent-color: var(--color-lavender);
 }
 .file\:bg-emerald-50::file-selector-button {
-  background-color: rgba(124, 108, 230, 0.16);
+  background-color: rgb(var(--accent-rgb) / 0.12);
 }
 .hover\:file\:bg-emerald-100:hover::file-selector-button {
-  background-color: rgba(124, 108, 230, 0.24);
+  background-color: rgb(var(--accent-rgb) / 0.18);
 }
 .file\:text-emerald-700::file-selector-button {
   color: var(--color-lavender-soft);
@@ -352,10 +428,10 @@ button:not(:disabled):active {
 
 /* Amber -> butter (star / medium / warning) */
 .bg-amber-50 {
-  background-color: rgba(246, 215, 126, 0.16);
+  background-color: rgb(var(--warn-rgb) / 0.16);
 }
 .bg-amber-100 {
-  background-color: rgba(246, 215, 126, 0.24);
+  background-color: rgb(var(--warn-rgb) / 0.24);
 }
 .bg-amber-500,
 .bg-amber-600 {
@@ -368,31 +444,31 @@ button:not(:disabled):active {
   background-color: #e8c65f;
 }
 .text-amber-500 {
-  color: var(--color-butter);
+  color: var(--color-warn-ink);
 }
 .text-amber-600 {
-  color: #f1cb62;
+  color: var(--color-warn-ink);
 }
 .text-amber-700 {
-  color: #f3d178;
+  color: var(--color-warn-ink);
 }
 .text-amber-800 {
-  color: #f8e1a0;
+  color: var(--color-warn-ink);
 }
 .text-amber-800\/70 {
-  color: rgba(248, 225, 160, 0.72);
+  color: rgb(var(--warn-rgb) / 0.72);
 }
 .text-amber-900 {
-  color: #fbeab8;
+  color: var(--color-warn-ink);
 }
 .text-amber-950 {
-  color: #fdf3d6;
+  color: var(--color-warn-ink);
 }
 .border-amber-200 {
-  border-color: rgba(246, 215, 126, 0.35);
+  border-color: rgb(var(--warn-rgb) / 0.4);
 }
 .border-amber-300 {
-  border-color: rgba(246, 215, 126, 0.5);
+  border-color: rgb(var(--warn-rgb) / 0.55);
 }
 .border-amber-500 {
   border-color: var(--color-butter);
@@ -403,13 +479,13 @@ button:not(:disabled):active {
 
 /* Red -> pink (wrong / hard / flag / danger) */
 .bg-red-50 {
-  background-color: rgba(243, 180, 200, 0.14);
+  background-color: rgb(var(--danger-rgb) / 0.14);
 }
 .bg-red-100 {
-  background-color: rgba(243, 180, 200, 0.22);
+  background-color: rgb(var(--danger-rgb) / 0.22);
 }
 .bg-red-200 {
-  background-color: rgba(243, 180, 200, 0.3);
+  background-color: rgb(var(--danger-rgb) / 0.3);
 }
 .bg-red-500,
 .bg-red-600 {
@@ -419,10 +495,10 @@ button:not(:disabled):active {
   background-color: #e79bb2;
 }
 .hover\:bg-red-50:hover {
-  background-color: rgba(243, 180, 200, 0.2);
+  background-color: rgb(var(--danger-rgb) / 0.2);
 }
 .hover\:bg-red-200:hover {
-  background-color: rgba(243, 180, 200, 0.3);
+  background-color: rgb(var(--danger-rgb) / 0.3);
 }
 .hover\:bg-red-600:hover {
   background-color: var(--color-pink);
@@ -431,22 +507,22 @@ button:not(:disabled):active {
   background-color: #e79bb2;
 }
 .text-red-500 {
-  color: #f6c3d3;
+  color: var(--color-danger-ink);
 }
 .text-red-600 {
-  color: var(--color-pink);
+  color: var(--color-danger-ink);
 }
 .text-red-700 {
-  color: #f7c7d7;
+  color: var(--color-danger-ink);
 }
 .text-red-800 {
-  color: #fad7e2;
+  color: var(--color-danger-ink);
 }
 .border-red-200 {
-  border-color: rgba(243, 180, 200, 0.32);
+  border-color: rgb(var(--danger-rgb) / 0.35);
 }
 .border-red-300 {
-  border-color: rgba(243, 180, 200, 0.45);
+  border-color: rgb(var(--danger-rgb) / 0.5);
 }
 .border-red-500 {
   border-color: var(--color-pink);
@@ -455,13 +531,13 @@ button:not(:disabled):active {
   border-left-color: var(--color-pink);
 }
 .border-t-red-200 {
-  border-top-color: rgba(243, 180, 200, 0.32);
+  border-top-color: rgb(var(--danger-rgb) / 0.35);
 }
 .border-r-red-200 {
-  border-right-color: rgba(243, 180, 200, 0.32);
+  border-right-color: rgb(var(--danger-rgb) / 0.35);
 }
 .border-b-red-200 {
-  border-bottom-color: rgba(243, 180, 200, 0.32);
+  border-bottom-color: rgb(var(--danger-rgb) / 0.35);
 }
 .ring-red-400 {
   --tw-ring-color: var(--color-pink);
@@ -469,42 +545,42 @@ button:not(:disabled):active {
 
 /* Violet -> lavender (new-question accent) */
 .bg-violet-50 {
-  background-color: rgba(124, 108, 230, 0.16);
+  background-color: rgb(var(--accent-rgb) / 0.12);
 }
 .bg-violet-100 {
-  background-color: rgba(124, 108, 230, 0.24);
+  background-color: rgb(var(--accent-rgb) / 0.18);
 }
 .bg-violet-500 {
   background-color: var(--color-lavender);
 }
 .text-violet-800 {
-  color: #cbc3f7;
+  color: var(--color-accent-ink);
 }
 .text-violet-800\/70 {
-  color: rgba(203, 195, 247, 0.72);
+  color: rgb(var(--accent-rgb) / 0.72);
 }
 .text-violet-900 {
-  color: #e0dbfb;
+  color: var(--color-accent-ink);
 }
 .text-violet-950 {
-  color: #ece9fd;
+  color: var(--color-accent-ink);
 }
 
 /* Sky -> sage (starred-review accent) */
 .bg-sky-50 {
-  background-color: rgba(156, 198, 139, 0.16);
+  background-color: rgb(var(--sage-rgb) / 0.16);
 }
 .bg-sky-500 {
   background-color: var(--color-sage);
 }
 .text-sky-800 {
-  color: #bfddb2;
+  color: var(--color-sage-ink);
 }
 .text-sky-800\/70 {
-  color: rgba(191, 221, 178, 0.72);
+  color: rgb(var(--sage-rgb) / 0.72);
 }
 .text-sky-950 {
-  color: #ddedd6;
+  color: var(--color-sage-ink);
 }
 
 /* Dark text on pastel-filled controls (AA contrast) */
@@ -520,21 +596,12 @@ button:not(:disabled):active {
   color: var(--color-on-accent);
 }
 
-/* Ring offsets sit on the dark base */
+/* Ring offsets sit on the base surface */
 .ring-offset-white {
   --tw-ring-offset-color: var(--color-base);
 }
 
-/* Slightly rounder inner surfaces + a touch more tracking on labels */
-.rounded-2xl {
-  border-radius: 24px;
-}
-.rounded-xl {
-  border-radius: 16px;
-}
-.rounded-lg {
-  border-radius: 12px;
-}
+/* A touch more tracking on labels (radii now come from @theme tokens). */
 .tracking-wide {
   letter-spacing: 0.04em;
 }
@@ -546,11 +613,11 @@ button:not(:disabled):active {
    COMPONENTS
    ============================================================ */
 
-/* Generic elevated surface */
+/* Generic surface: flat, hairline border, compact radius */
 .card {
   background-color: var(--color-surface);
   border: 1px solid var(--color-line);
-  border-radius: 24px;
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-card);
 }
 
@@ -558,12 +625,15 @@ button:not(:disabled):active {
   transition:
     transform 0.18s ease,
     box-shadow 0.18s ease,
-    border-color 0.18s ease;
+    border-color 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .card-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+  border-color: var(--color-line-strong);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
 /* Pastel accent cards: background + foreground come from variables so
@@ -660,23 +730,23 @@ button:not(:disabled):active {
   --card-icon-bg: rgba(255, 255, 255, 0.22);
 }
 
-/* Circular icon buttons (arrow / edit / delete) */
+/* Circular icon buttons (arrow / edit / delete) - compact */
 .icon-circle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: 999px;
   border: 1px solid var(--color-line);
   background-color: var(--color-elevated);
-  color: rgba(255, 255, 255, 0.8);
+  color: rgb(var(--ink-rgb) / 0.8);
   cursor: pointer;
 }
 
 .icon-circle:hover {
-  background-color: #34343a;
-  color: #fff;
+  background-color: var(--color-hover-strong);
+  color: var(--color-ink);
 }
 
 /* Pill button + dark circular arrow that lives inside a mode card */
@@ -684,8 +754,8 @@ button:not(:disabled):active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 999px;
   background-color: rgba(0, 0, 0, 0.78);
   color: #fff;
@@ -700,25 +770,25 @@ button:not(:disabled):active {
 .card-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   border-radius: 999px;
-  padding: 0.25rem 0.7rem;
-  font-size: 0.75rem;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   background-color: rgba(0, 0, 0, 0.1);
   color: inherit;
 }
 
-/* Big bold stat number with a small muted label under it */
+/* Bold stat number with a small muted label under it */
 .stat-num {
   font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   line-height: 1;
 }
 
 .label-caps {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -730,13 +800,13 @@ button:not(:disabled):active {
   border-radius: 999px;
   border: 1px solid var(--color-line);
   background-color: transparent;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgb(var(--ink-rgb) / 0.62);
   cursor: pointer;
 }
 
 .filter-pill:hover {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--color-ink);
+  border-color: var(--color-line-strong);
 }
 
 .filter-pill[aria-pressed="true"] {
@@ -750,7 +820,7 @@ button:not(:disabled):active {
   border-radius: 999px;
   border: 1px solid var(--color-line);
   background-color: transparent;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgb(var(--ink-rgb) / 0.6);
   cursor: pointer;
 }
 .diff[aria-pressed="true"].diff-easy {
@@ -770,20 +840,20 @@ button:not(:disabled):active {
 }
 .diff-easy:hover {
   border-color: var(--color-sage);
-  color: #cfe4c6;
+  color: var(--color-sage-ink);
 }
 .diff-medium:hover {
   border-color: var(--color-butter);
-  color: #f8e6b4;
+  color: var(--color-warn-ink);
 }
 .diff-hard:hover {
   border-color: var(--color-pink);
-  color: #f8d3df;
+  color: var(--color-danger-ink);
 }
 
 /* Progress bars */
 .progress-track {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgb(var(--ink-rgb) / 0.08);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -804,16 +874,16 @@ button:not(:disabled):active {
 
 /* Answer review cards: a coloured left accent */
 .answer-card {
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   border: 1px solid var(--color-line);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
 .answer-card.is-correct {
-  border-left: 4px solid var(--color-sage);
+  border-left: 3px solid var(--color-sage);
 }
 .answer-card.is-wrong {
-  border-left: 4px solid var(--color-pink);
+  border-left: 3px solid var(--color-pink);
 }
 
 /* ---- Quiz-taking: question card + answer options ---- */
@@ -822,36 +892,30 @@ button:not(:disabled):active {
   overflow: hidden;
 }
 
-/* A soft rainbow accent along the top of the question card. */
+/* A single calm accent bar along the top of the question card. */
 .quiz-card::before {
   content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(
-    90deg,
-    var(--color-sage),
-    var(--color-butter),
-    var(--color-pink),
-    var(--color-lavender)
-  );
+  height: 3px;
+  background: var(--color-lavender);
 }
 
 .quiz-option {
   background-color: var(--color-surface);
   border-color: var(--color-line);
-  color: rgba(255, 255, 255, 0.82);
+  color: rgb(var(--ink-rgb) / 0.82);
   cursor: pointer;
 }
 .quiz-option:hover {
-  background-color: #2a2a2f;
-  border-color: rgba(255, 255, 255, 0.22);
+  background-color: var(--color-hover);
+  border-color: var(--color-line-strong);
 }
 .quiz-letter {
   background-color: var(--color-elevated);
-  color: rgba(255, 255, 255, 0.72);
+  color: rgb(var(--ink-rgb) / 0.72);
 }
 
 /* Four pastel letter colours, rotating down the list. */
@@ -887,27 +951,27 @@ button:not(:disabled):active {
 .field {
   background-color: var(--color-elevated);
   border: 1px solid var(--color-line);
-  color: #fff;
-  border-radius: 12px;
+  color: var(--color-ink);
+  border-radius: var(--radius-md);
 }
 .field::placeholder {
-  color: rgba(255, 255, 255, 0.52);
+  color: rgb(var(--ink-rgb) / 0.5);
 }
 .field:focus {
   border-color: var(--color-lavender);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(124, 108, 230, 0.28);
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.28);
 }
 
 /* Toasts */
 .toast {
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-line);
-  box-shadow: var(--shadow-card-hover);
+  box-shadow: var(--shadow-menu);
 }
 .toast-success {
   background-color: var(--color-elevated);
-  color: #fff;
+  color: var(--color-ink);
 }
 .toast-error {
   background-color: var(--color-pink);
@@ -916,17 +980,17 @@ button:not(:disabled):active {
 
 /* Answers on the results screen */
 .text-correct {
-  color: var(--color-sage);
+  color: var(--color-sage-ink);
 }
 .text-wrong {
-  color: var(--color-pink);
+  color: var(--color-danger-ink);
 }
 
 /* Small translucent block used for the score-card stats. When it sits on a
    pastel card it inherits the card's dark-on-pastel treatment. */
 .stat-block {
   background-color: rgba(0, 0, 0, 0.12);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
 }
 
 /* Extra foreground overrides for the pastel cards (some elements use these
@@ -962,18 +1026,18 @@ button:not(:disabled):active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
   padding: 0;
   border: 1px solid var(--color-line);
   border-radius: 999px;
-  background-color: rgba(44, 44, 48, 0.86);
-  color: #fff;
+  background-color: var(--color-elevated);
+  color: var(--color-ink);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.8);
+  box-shadow: var(--shadow-menu);
   cursor: pointer;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   line-height: 1;
 }
 
@@ -1018,23 +1082,12 @@ html.dark #theme-toggle .icon-moon {
    ============================================================ */
 @media (max-width: 639px) {
   :root {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   [class*="py-12"] {
     padding-top: 1.75rem;
     padding-bottom: 1.75rem;
-  }
-
-  h1.font-display.text-4xl,
-  h1.font-display.text-3xl {
-    font-size: 1.75rem;
-    line-height: 1.2;
-  }
-
-  .font-display.text-6xl {
-    font-size: 3rem;
-    line-height: 1.1;
   }
 
   .rounded-2xl.border.bg-white.p-6,
@@ -1170,19 +1223,19 @@ html.dark #theme-toggle .icon-moon {
   appearance: none;
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgb(var(--ink-rgb) / 0.14);
   cursor: pointer;
 }
 
 .range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
   background: var(--color-lavender);
   border: 2px solid var(--color-surface);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 .range::-moz-range-thumb {
@@ -1191,12 +1244,12 @@ html.dark #theme-toggle .icon-moon {
   border-radius: 999px;
   background: var(--color-lavender);
   border: 2px solid var(--color-surface);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 .range:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(124, 108, 230, 0.35);
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.35);
 }
 
 /* Coarse pointers (tablet / stylus / touch): grow the draggable area and the
