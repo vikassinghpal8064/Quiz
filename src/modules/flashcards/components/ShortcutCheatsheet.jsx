@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Icon from "../../../components/Icon.jsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { overlay, panel } from "./modalMotion";
 
@@ -95,7 +96,7 @@ export default function ShortcutCheatsheet() {
                   aria-label="Close"
                   className="grid h-8 w-8 place-items-center rounded-md text-ink/50 transition hover:bg-ink/5 hover:text-ink"
                 >
-                  ✕
+                  <Icon name="x" size={18} />
                 </button>
               </div>
 

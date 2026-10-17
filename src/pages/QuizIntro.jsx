@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
+import Icon from "../components/Icon";
 import QuizTimerModal from "../components/QuizTimerModal";
 import { useAuth } from "../lib/authContext";
 import { cachedFetch } from "../lib/apiCache";
@@ -133,7 +134,8 @@ export default function QuizIntro() {
         to={category?.subject_id ? `/subject/${category.subject_id}` : "/"}
         className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink/50 transition-colors hover:text-ink"
       >
-        ← Back to Categories
+        <Icon name="arrow-left" size={16} />
+        Back to Categories
       </Link>
 
       {error && (
@@ -173,7 +175,8 @@ export default function QuizIntro() {
                       to={`/admin/upload?subject=${category.subject_id}&category=${categoryId}`}
                       className="inline-flex items-center gap-1.5 rounded-xl border border-ink/10 bg-stone-100 px-4 py-2 text-sm font-semibold text-ink/80 transition hover:bg-ink/10"
                     >
-                      ＋ Add Question
+                      <Icon name="plus" size={16} />
+                      Add Question
                     </Link>
                   </div>
                 )}
@@ -235,7 +238,8 @@ export default function QuizIntro() {
                       to={`/admin/upload?subject=${category.subject_id}&category=${categoryId}`}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700"
                     >
-                      ＋ Add Question
+                      <Icon name="plus" size={16} />
+                      Add Question
                     </Link>
                   )}
                 </div>
@@ -304,7 +308,7 @@ export default function QuizIntro() {
                       : `All ${category.question_count} questions in this category.`}
                   </p>
                   <p className="mt-4 text-sm font-semibold text-ink">
-                    {starting === "full" ? "Starting..." : "Begin →"}
+                    {starting === "full" ? "Starting..." : (<span className="inline-flex items-center gap-1">Begin <Icon name="arrow-right" size={16} /></span>)}
                   </p>
                 </motion.button>
 
@@ -332,7 +336,7 @@ export default function QuizIntro() {
                       {wrongCount > 0
                         ? starting === "wrong_only"
                           ? "Starting..."
-                          : "Begin →"
+                          : (<span className="inline-flex items-center gap-1">Begin <Icon name="arrow-right" size={16} /></span>)
                         : ""}
                     </p>
                   </button>
@@ -365,7 +369,7 @@ export default function QuizIntro() {
                       {starredCount > 0
                         ? starting === "starred_only"
                           ? "Starting..."
-                          : "Begin →"
+                          : (<span className="inline-flex items-center gap-1">Begin <Icon name="arrow-right" size={16} /></span>)
                         : ""}
                     </p>
                   </button>
@@ -398,7 +402,7 @@ export default function QuizIntro() {
                       {newQuestionsCount > 0
                         ? starting === "new_only"
                           ? "Starting..."
-                          : "Begin →"
+                          : (<span className="inline-flex items-center gap-1">Begin <Icon name="arrow-right" size={16} /></span>)
                         : ""}
                     </p>
                   </button>

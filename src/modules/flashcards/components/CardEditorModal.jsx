@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Icon from "../../../components/Icon.jsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { createCard, updateCard } from "../lib/api";
 import { SELECTABLE_CARD_TYPES, getCardType } from "../cardTypes/registry";
@@ -173,7 +174,7 @@ export default function CardEditorModal({
                 aria-label="Close editor"
                 className="icon-circle text-lg hover:bg-ink/5"
               >
-                ✕
+                <Icon name="x" size={18} />
               </button>
             </div>
 

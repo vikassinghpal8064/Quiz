@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Icon from "./Icon.jsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { fetchQuestionFlags, reasonLabel, updateFlagStatus } from "../lib/questionMeta";
 
@@ -88,7 +89,7 @@ export default function FlagDetailsModal({ open, questionId, onClose, onChanged 
                 aria-label="Close"
                 className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-sm font-semibold text-ink/70 transition hover:bg-ink/10"
               >
-                ✕
+                <Icon name="x" size={18} />
               </button>
             </div>
 

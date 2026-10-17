@@ -68,7 +68,7 @@ export default function StrugglePage() {
       <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <FlashBreadcrumbs items={[{ label: "Flash Cards", to: "/flash" }]} />
         <EmptyState
-          icon="🔍"
+          icon="search"
           title="Category not found"
           description="This category may have been deleted."
         >
@@ -115,7 +115,7 @@ export default function StrugglePage() {
         <ListSkeleton rows={5} />
       ) : cards.length === 0 ? (
         <EmptyState
-          icon="🌱"
+          icon="sparkles"
           title="No cards to work on"
           description="None of this category's cards are struggling right now. Nice work."
         >

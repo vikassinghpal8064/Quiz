@@ -10,7 +10,8 @@
 //   id       stable key; also the value stored in localStorage as the
 //            "last used mode"
 //   label    text shown in the mode switch and the nav items
-//   icon     a single glyph, matching the app's text-icon style (no icon lib)
+//   icon     the name of an entry in the shared inline-SVG icon set
+//            (src/components/Icon.jsx), rendered by the shell's nav
 //   basePath route prefix that owns the module; "/" owns everything that no
 //            other module's basePath claims
 //   routes   the path patterns the module serves, most specific first. Kept
@@ -20,7 +21,7 @@ export const modules = [
   {
     id: "quiz",
     label: "Quiz",
-    icon: "◆",
+    icon: "book",
     basePath: "/",
     routes: [
       "/",
@@ -39,7 +40,7 @@ export const modules = [
   {
     id: "flashcards",
     label: "Flash Cards",
-    icon: "▤",
+    icon: "layers",
     basePath: "/flash",
     // The module's own links, shown under its nav item when it is active.
     // Purely presentational navigation; every route already exists.

@@ -5,6 +5,7 @@ import LoadingSkeleton from "../components/LoadingSkeleton";
 import BackButton from "../components/BackButton";
 import StarIcon from "../components/StarIcon";
 import FlagIcon from "../components/FlagIcon";
+import Icon from "../components/Icon";
 import FlagModal from "../components/FlagModal";
 import DifficultyChips from "../components/DifficultyChips";
 import {
@@ -545,9 +546,10 @@ export default function QuizTaking() {
         <button
           onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
           disabled={currentIndex === 0}
-          className="rounded-full px-4 py-2 text-sm font-medium text-ink/60 transition-colors hover:bg-stone-100 disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-ink/60 transition-colors hover:bg-stone-100 disabled:opacity-40"
         >
-          ← Previous
+          <Icon name="arrow-left" size={16} />
+          Previous
         </button>
 
         {currentIndex === questions.length - 1 ? (
@@ -563,9 +565,10 @@ export default function QuizTaking() {
             onClick={() =>
               setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))
             }
-            className="rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
           >
-            Next →
+            Next
+            <Icon name="arrow-right" size={16} />
           </button>
         )}
       </div>
@@ -601,10 +604,10 @@ export default function QuizTaking() {
                 {i + 1}
                 {isStarred && (
                   <span
-                    className="absolute -right-1 -top-1 text-[10px] text-amber-500"
+                    className="absolute -right-1 -top-1 text-amber-500"
                     aria-hidden="true"
                   >
-                    ★
+                    <Icon name="star" size={11} filled />
                   </span>
                 )}
                 {flaggedMap[q.id] && (

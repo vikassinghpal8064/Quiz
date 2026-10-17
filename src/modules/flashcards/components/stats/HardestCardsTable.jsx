@@ -1,5 +1,6 @@
 import { formatDuration, isStruggling, sideText } from "../../lib/format";
 import EmptyState from "../../../../components/EmptyState";
+import Icon from "../../../../components/Icon";
 
 // The Hardest Cards table: the scheduler's struggle score, lapse count and
 // average think time for the cards fighting the hardest, with a button that
@@ -25,7 +26,7 @@ export default function HardestCardsTable({ cards = [], onStudyNow, busy = false
   if (cards.length === 0) {
     return (
       <EmptyState
-        icon="🎯"
+        icon="target"
         title="No struggle data yet"
         description="Cards that take long, lapse or keep coming back will be listed here."
       />
@@ -58,11 +59,17 @@ export default function HardestCardsTable({ cards = [], onStudyNow, busy = false
           </thead>
           <tbody>
             {cards.map((card) => {
-              const front = sideText(card.front) || "🖼️ Media card";
+              const front = sideText(card.front);
               return (
                 <tr key={card.id} className="border-t border-ink/8">
                   <td className="max-w-[22rem] px-2 py-2.5">
-                    <span className="line-clamp-2 text-ink/85">{front}</span>
+                    <span className="line-clamp-2 text-ink/85">
+                      {front || (
+                        <span className="inline-flex items-center gap-1 text-ink/50">
+                          <Icon name="image" size={14} /> Media card
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td className="hidden px-2 py-2.5 text-ink/55 sm:table-cell">
                     {card.category_name ?? "—"}

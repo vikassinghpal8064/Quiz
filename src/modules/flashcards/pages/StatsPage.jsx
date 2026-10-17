@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import LoadingSkeleton from "../../../components/LoadingSkeleton";
+import Icon from "../../../components/Icon";
 import Toast from "../../../components/Toast";
 import useToast from "../hooks/useToast";
 import useStartSession from "../hooks/useStartSession";
@@ -204,7 +205,7 @@ export default function StatsPage() {
                 label="Current streak"
                 value={`${heatmap?.current_streak ?? 0}d`}
                 hint={`longest ${heatmap?.longest_streak ?? 0} days`}
-                icon="🔥"
+                icon="flame"
                 tone={(heatmap?.current_streak ?? 0) > 0 ? "warn" : "default"}
               />
               <StatTile
@@ -221,13 +222,13 @@ export default function StatsPage() {
                 label="Due · next 30d"
                 value={forecast?.total ?? 0}
                 hint={`${forecast?.overdue ?? 0} overdue`}
-                icon="📅"
+                icon="calendar"
               />
               <StatTile
                 label="Cards tracked"
                 value={states?.total ?? 0}
                 hint={`${states?.mastered ?? 0} mastered`}
-                icon="🃏"
+                icon="layers"
               />
             </div>
 
@@ -273,8 +274,10 @@ export default function StatsPage() {
             <section className="answer-card p-5">
               <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-lg font-semibold text-ink">Reviews per day</h2>
-                <p className="text-sm text-ink/50">
-                  {heatmap?.total ?? 0} reviews in the last year · 🔥 {heatmap?.current_streak ?? 0}-day streak
+                <p className="inline-flex flex-wrap items-center gap-x-1.5 text-sm text-ink/50">
+                  {heatmap?.total ?? 0} reviews in the last year ·
+                  <Icon name="flame" size={14} className="text-orange-500" />
+                  {heatmap?.current_streak ?? 0}-day streak
                 </p>
               </div>
               <Heatmap weeks={heatmap?.weeks ?? []} max={heatmap?.max ?? 0} />

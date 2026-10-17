@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import Icon from "../components/Icon";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import QuestionEditModal from "../components/QuestionEditModal";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
@@ -209,7 +210,8 @@ export default function ManageQuestions() {
         to={`/category/${catId}`}
         className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink/50 transition-colors hover:text-ink"
       >
-        ← Back to {category?.name ?? "Category"}
+        <Icon name="arrow-left" size={16} />
+        Back to {category?.name ?? "Category"}
       </Link>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -228,7 +230,8 @@ export default function ManageQuestions() {
           to={`/admin/upload?subject=${paramSubject}&category=${paramCategory}`}
           className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
         >
-          ＋ Add Question
+          <Icon name="plus" size={16} />
+          Add Question
         </Link>
       </div>
 
@@ -262,26 +265,28 @@ export default function ManageQuestions() {
             type="button"
             onClick={() => setStarredFilter((v) => !v)}
             aria-pressed={starredFilter}
-            className={`filter-pill rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+            className={`filter-pill inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
               starredFilter
                 ? "border-amber-500 bg-amber-50 text-amber-800"
                 : "border-ink/10 bg-white text-ink/60 hover:border-amber-300"
             }`}
           >
-            ★ Starred
+            <Icon name="star" size={13} />
+            Starred
           </button>
 
           <button
             type="button"
             onClick={() => setFlaggedFilter((v) => !v)}
             aria-pressed={flaggedFilter}
-            className={`filter-pill rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+            className={`filter-pill inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
               flaggedFilter
                 ? "border-red-500 bg-red-50 text-red-700"
                 : "border-ink/10 bg-white text-ink/60 hover:border-red-300"
             }`}
           >
-            ⚑ Flagged
+            <Icon name="flag" size={13} />
+            Flagged
           </button>
 
           {DIFFICULTIES.map((level) => {
@@ -380,7 +385,8 @@ export default function ManageQuestions() {
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {q.is_starred && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                        ★ Starred
+                        <Icon name="star" size={12} />
+                        Starred
                       </span>
                     )}
                     <button
@@ -398,7 +404,7 @@ export default function ManageQuestions() {
                           : "No open flags"
                       }
                     >
-                      ⚑ {q.flag_count} {q.flag_count === 1 ? "flag" : "flags"}
+                      <Icon name="flag" size={12} /> {q.flag_count} {q.flag_count === 1 ? "flag" : "flags"}
                     </button>
                     {q.my_difficulty && (
                       <span
@@ -418,27 +424,27 @@ export default function ManageQuestions() {
                     onClick={() => setMoveIds([q.id])}
                     title="Move question"
                     aria-label={`Move question ${q.id}`}
-                    className="icon-circle text-sm hover:bg-ink/5"
+                    className="icon-circle hover:bg-ink/5"
                   >
-                    ⇄
+                    <Icon name="arrow-left-right" size={16} />
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditQuestion(q)}
                     title="Edit question"
                     aria-label={`Edit question ${q.id}`}
-                    className="icon-circle text-sm hover:bg-emerald-50 hover:text-emerald-700"
+                    className="icon-circle hover:bg-emerald-50 hover:text-emerald-700"
                   >
-                    ✏️
+                    <Icon name="pencil" size={16} />
                   </button>
                   <button
                     type="button"
                     onClick={() => setDeleteQuestion(q)}
                     title="Delete question"
                     aria-label={`Delete question ${q.id}`}
-                    className="icon-circle text-sm hover:bg-red-50 hover:text-red-700"
+                    className="icon-circle hover:bg-red-50 hover:text-red-700"
                   >
-                    🗑️
+                    <Icon name="trash" size={16} />
                   </button>
                 </div>
               </div>

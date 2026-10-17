@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Icon from "../../../components/Icon.jsx";
 import RichTextEditor from "./RichTextEditor";
 import ImageBlockEditor from "./ImageBlockEditor";
 import AudioBlockEditor from "./AudioBlockEditor";
@@ -100,7 +101,7 @@ export default function BlockStackEditor({ side, onChange, disabled = false, pla
                   aria-label="Remove block"
                   className="absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-ink/15 bg-white text-xs text-ink/50 shadow-sm transition hover:bg-red-50 hover:text-red-600"
                 >
-                  ✕
+                  <Icon name="x" size={18} />
                 </button>
               )}
             </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Icon from "../../../components/Icon";
 
 // Tag editor with autocomplete. Mirrors the API's limits (validateTags in
 // api/_lib/flashCards.js): at most 50 tags, each at most 64 characters.
@@ -58,7 +59,7 @@ export default function TagInput({
                 aria-label={`Remove tag ${tag}`}
                 className="text-sky-700 transition hover:text-sky-900"
               >
-                ×
+                <Icon name="x" size={12} />
               </button>
             )}
           </span>

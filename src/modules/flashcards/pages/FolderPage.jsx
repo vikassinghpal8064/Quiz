@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Icon from "../../../components/Icon";
 import { Link, useParams } from "react-router-dom";
 import EmptyState from "../../../components/EmptyState";
 import ConfirmDeleteModal from "../../../components/ConfirmDeleteModal";
@@ -172,7 +173,7 @@ export default function FolderPage() {
       <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         {breadcrumb}
         <EmptyState
-          icon="🔍"
+          icon="search"
           title="Folder not found"
           description="This folder may have been deleted."
         >
@@ -236,7 +237,7 @@ export default function FolderPage() {
         <ErrorState message={error} onRetry={() => window.location.reload()} />
       ) : categories.length === 0 ? (
         <EmptyState
-          icon="📂"
+          icon="folder-open"
           title="No categories yet"
           description="Categories group related cards inside this folder."
         >
@@ -265,11 +266,11 @@ export default function FolderPage() {
               } ${dragIndex === i ? "opacity-50" : ""}`}
             >
               <span
-                className="cursor-grab select-none text-lg text-ink/30"
+                className="cursor-grab select-none text-ink/30"
                 title="Drag to reorder"
                 aria-hidden="true"
               >
-                ⠿
+                <Icon name="grip" size={16} />
               </span>
 
               <div className="flex flex-col">
@@ -278,18 +279,18 @@ export default function FolderPage() {
                   onClick={() => moveCategory(i, i - 1)}
                   disabled={i === 0}
                   aria-label={`Move ${category.name} up`}
-                  className="px-1 text-xs text-ink/40 transition-colors hover:text-ink disabled:opacity-30"
+                  className="px-1 text-ink/40 transition-colors hover:text-ink disabled:opacity-30"
                 >
-                  ▲
+                  <Icon name="chevron-up" size={16} />
                 </button>
                 <button
                   type="button"
                   onClick={() => moveCategory(i, i + 1)}
                   disabled={i === categories.length - 1}
                   aria-label={`Move ${category.name} down`}
-                  className="px-1 text-xs text-ink/40 transition-colors hover:text-ink disabled:opacity-30"
+                  className="px-1 text-ink/40 transition-colors hover:text-ink disabled:opacity-30"
                 >
-                  ▼
+                  <Icon name="chevron-down" size={16} />
                 </button>
               </div>
 
@@ -317,18 +318,18 @@ export default function FolderPage() {
                   onClick={() => setEditing(category)}
                   title="Rename category"
                   aria-label={`Rename ${category.name}`}
-                  className="icon-circle text-sm hover:bg-emerald-50 hover:text-emerald-700"
+                  className="icon-circle hover:bg-emerald-50 hover:text-emerald-700"
                 >
-                  ✏️
+                  <Icon name="pencil" size={16} />
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(category)}
                   title="Delete category"
                   aria-label={`Delete ${category.name}`}
-                  className="icon-circle text-sm hover:bg-red-50 hover:text-red-700"
+                  className="icon-circle hover:bg-red-50 hover:text-red-700"
                 >
-                  🗑️
+                  <Icon name="trash" size={16} />
                 </button>
               </div>
             </li>

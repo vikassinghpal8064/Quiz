@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Icon from "./Icon.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { cachedFetch } from "../lib/apiCache";
 
@@ -109,7 +110,7 @@ export default function QuestionEditModal({ question, onClose, onSaved }) {
               aria-label="Close"
               className="grid h-8 w-8 place-items-center rounded-md text-ink/50 transition hover:bg-ink/5 hover:text-ink"
             >
-              ✕
+              <Icon name="x" size={18} />
             </button>
           </div>
 

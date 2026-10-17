@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import LoadingSkeleton from "../../../components/LoadingSkeleton";
+import Icon from "../../../components/Icon";
 import EmptyState from "../../../components/EmptyState";
 import Toast from "../../../components/Toast";
 import useToast from "../hooks/useToast";
@@ -94,7 +95,7 @@ export default function FlashHome() {
         <ErrorState message={error} onRetry={load} />
       ) : folders.length === 0 ? (
         <EmptyState
-          icon="🗂️"
+          icon="folder"
           title="No folders yet"
           description="Create a folder to start collecting flash cards."
         >
@@ -148,7 +149,8 @@ export default function FlashHome() {
                     disabled={focusBusyId === folder.id}
                     className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-black/10 px-4 py-2 text-sm font-semibold transition-colors hover:bg-black/20 disabled:opacity-60"
                   >
-                    ▶ Start Focus Session
+                    <Icon name="play" size={16} />
+                    Start Focus Session
                   </button>
                 </div>
               </div>

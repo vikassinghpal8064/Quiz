@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { modules, moduleForPath } from "../modules/registry";
 import { useAuth } from "../lib/authContext";
+import Icon from "./Icon";
 
 // Small storage helpers. localStorage can throw in private mode / sandboxed
 // iframes, so every access is guarded and failures are non-fatal.
@@ -106,9 +107,7 @@ export default function AppShell() {
                       : "font-medium text-ink/70 hover:bg-ink/5 hover:text-ink"
                   }`}
                 >
-                  <span className="grid h-5 w-5 shrink-0 place-items-center" aria-hidden="true">
-                    {m.icon}
-                  </span>
+                  <Icon name={m.icon} size={18} className="shrink-0" />
                   {!collapsed && <span className="truncate">{m.label}</span>}
                 </Link>
 
@@ -144,7 +143,7 @@ export default function AppShell() {
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className="grid h-7 w-7 place-items-center rounded-md text-xs font-semibold text-ink/45 transition-colors hover:bg-ink/5 hover:text-ink"
           >
-            <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
+            <Icon name={collapsed ? "chevrons-right" : "chevrons-left"} size={16} />
           </button>
         </div>
       </aside>

@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import Icon from "./Icon";
 
 export default function Toast({ toasts, onDismiss }) {
   return (
@@ -16,19 +17,20 @@ export default function Toast({ toasts, onDismiss }) {
                 : "toast-success"
             }`}
           >
-            <span className="mt-0.5 font-bold">
+            <span className="mt-0.5 flex shrink-0 items-center">
               {t.type === "error" ? (
-                "✕"
+                <Icon name="alert-circle" size={18} className="text-danger-ink" />
               ) : (
-                <span className="text-correct">✓</span>
+                <Icon name="check" size={18} className="text-sage-ink" />
               )}
             </span>
             <span className="flex-1">{t.message}</span>
             <button
               onClick={() => onDismiss(t.id)}
+              aria-label="Dismiss"
               className="opacity-60 transition-opacity hover:opacity-100"
             >
-              ✕
+              <Icon name="x" size={16} />
             </button>
           </motion.div>
         ))}

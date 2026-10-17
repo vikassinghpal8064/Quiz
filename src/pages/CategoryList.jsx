@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
+import Icon from "../components/Icon";
 import CategoryCard from "../components/CategoryCard";
 import AddCategoryModal from "../components/AddCategoryModal";
 import EditCategoryModal from "../components/EditCategoryModal";
@@ -98,7 +99,8 @@ export default function CategoryList() {
         to="/"
         className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink/50 transition-colors hover:text-ink"
       >
-        ← Back to Dashboard
+        <Icon name="arrow-left" size={16} />
+        Back to Dashboard
       </Link>
 
       <div className="mb-10 text-center sm:text-left">
@@ -126,7 +128,7 @@ export default function CategoryList() {
         <LoadingSkeleton />
       ) : categories.length === 0 ? (
         <EmptyState
-          icon="🗂️"
+          icon="folder"
           title="No categories yet"
           description={
             isAdmin
@@ -161,7 +163,7 @@ export default function CategoryList() {
               onClick={() => setModalOpen(true)}
               className="flex h-44 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink/20 bg-white/40 text-ink/45 transition-colors hover:border-emerald-500 hover:text-emerald-600"
             >
-              <span className="text-3xl">＋</span>
+              <Icon name="plus" size={28} />
               <span className="mt-2 text-sm font-medium">Add Category</span>
             </motion.button>
           )}

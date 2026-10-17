@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import Icon from "../../../components/Icon";
 
 // Breadcrumb trail for the flash screens: Flash Cards > Folder > Category.
 // Pass an array of { label, to } items; the last item is the current page and
@@ -11,9 +12,7 @@ export default function FlashBreadcrumbs({ items = [] }) {
         return (
           <span key={`${item.label}-${i}`} className="flex items-center gap-1.5">
             {i > 0 && (
-              <span className="text-ink/30" aria-hidden="true">
-                ›
-              </span>
+              <Icon name="chevron-right" size={14} className="text-ink/30" />
             )}
             {last || !item.to ? (
               <span className="font-medium text-ink/80" aria-current={last ? "page" : undefined}>

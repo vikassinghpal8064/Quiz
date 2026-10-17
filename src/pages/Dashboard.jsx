@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/LoadingSkeleton";
+import Icon from "../components/Icon";
 import SubjectCard from "../components/SubjectCard";
 import AddSubjectModal from "../components/AddSubjectModal";
 import EditSubjectModal from "../components/EditSubjectModal";
@@ -97,7 +98,7 @@ export default function Dashboard() {
         <LoadingSkeleton />
       ) : subjects.length === 0 ? (
         <EmptyState
-          icon="📚"
+          icon="book"
           title="No subjects yet"
           description={
             isAdmin
@@ -132,7 +133,7 @@ export default function Dashboard() {
               onClick={() => setModalOpen(true)}
               className="flex h-44 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink/20 bg-white/40 text-ink/45 transition-colors hover:border-emerald-500 hover:text-emerald-600"
             >
-              <span className="text-3xl">＋</span>
+              <Icon name="plus" size={28} />
               <span className="mt-2 text-sm font-medium">Add Subject</span>
             </motion.button>
           )}

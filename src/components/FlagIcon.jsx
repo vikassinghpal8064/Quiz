@@ -21,7 +21,7 @@ export default function FlagIcon({ flagged, onToggle, className = "", size = 22 
         viewBox="0 0 24 24"
         fill={flagged ? "currentColor" : "none"}
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="1.75"
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden="true"

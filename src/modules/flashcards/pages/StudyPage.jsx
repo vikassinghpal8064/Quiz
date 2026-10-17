@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Toast from "../../../components/Toast";
+import Icon from "../../../components/Icon";
 import useToast from "../hooks/useToast";
 import {
   abandonSession,
@@ -461,7 +462,9 @@ export default function StudyPage() {
     return (
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="card p-8 text-center">
-          <div className="text-5xl">🎉</div>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-lavender text-on-accent">
+            <Icon name="sparkles" size={30} />
+          </div>
           <h1 className="mt-3 font-display text-3xl font-semibold text-ink">Session complete</h1>
           <p className="mt-2 text-sm text-ink/60">
             You answered {total} {total === 1 ? "card" : "cards"}.
@@ -504,7 +507,7 @@ export default function StudyPage() {
                   another focus session when you have a minute.
                 </>
               ) : (
-                <>You caught up on everything due in this deck. 🎯</>
+                <>You caught up on everything due in this deck. <Icon name="target" size={14} className="inline-block align-middle text-emerald-600" /></>
               )}
             </div>
           )}
@@ -541,7 +544,9 @@ export default function StudyPage() {
     return (
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="card p-10 text-center">
-          <div className="text-4xl">✅</div>
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+            <Icon name="check-circle" size={28} />
+          </div>
           <h1 className="mt-3 font-display text-2xl font-semibold text-ink">Nothing to study</h1>
           <p className="mt-2 text-sm text-ink/60">No cards are due in this deck right now.</p>
           <Link
@@ -646,8 +651,14 @@ export default function StudyPage() {
                 </button>
               ))}
             </div>
-            <p className="mt-3 text-center text-[11px] text-ink/40 sm:hidden">
-              Swipe: ← Again · Good → · ↑ Easy · ↓ Hard
+            <p className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-[11px] text-ink/40 sm:hidden">
+              <span className="inline-flex items-center gap-1"><Icon name="arrow-left" size={12} /> Again</span>
+              <span aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1">Good <Icon name="arrow-right" size={12} /></span>
+              <span aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1"><Icon name="arrow-up" size={12} /> Easy</span>
+              <span aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1"><Icon name="arrow-down" size={12} /> Hard</span>
             </p>
           </>
         )}
@@ -666,7 +677,9 @@ export default function StudyPage() {
       {leechCard && !leechEditing && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-ink/40 p-4">
           <div className="card w-full max-w-md p-6 text-center">
-            <div className="text-4xl">🧟</div>
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+              <Icon name="alert-triangle" size={28} />
+            </div>
             <h2 className="mt-3 font-display text-xl font-semibold text-ink">Rewrite this card?</h2>
             <p className="mt-2 text-sm text-ink/60">
               This card has slipped {leechCard.lapses ?? 0} times and has been suspended so it

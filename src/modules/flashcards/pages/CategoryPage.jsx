@@ -288,7 +288,7 @@ export default function CategoryPage() {
       <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <FlashBreadcrumbs items={[{ label: "Flash Cards", to: "/flash" }]} />
         <EmptyState
-          icon="🔍"
+          icon="search"
           title="Category not found"
           description="This category may have been deleted."
         >
@@ -439,7 +439,7 @@ export default function CategoryPage() {
       ) : cards.length === 0 ? (
         filterActive ? (
           <EmptyState
-            icon="🔍"
+            icon="search"
             title="No cards match"
             description="Try a different search or clear the tag filter."
           >
@@ -456,7 +456,7 @@ export default function CategoryPage() {
           </EmptyState>
         ) : (
           <EmptyState
-            icon="🃏"
+            icon="layers"
             title="No cards yet"
             description="Add your first card to start building this category."
           >

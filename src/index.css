@@ -1076,15 +1076,24 @@ button:not(:disabled):active {
   transform: scale(0.95);
 }
 
-#theme-toggle .icon-sun {
+#theme-toggle .icon-sun,
+#theme-toggle .icon-moon {
   display: none;
+  align-items: center;
+  justify-content: center;
+}
+#theme-toggle .icon-sun svg,
+#theme-toggle .icon-moon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
 }
 #theme-toggle .icon-moon {
-  display: inline;
+  display: flex;
 }
 
 html.dark #theme-toggle .icon-sun {
-  display: inline;
+  display: flex;
 }
 html.dark #theme-toggle .icon-moon {
   display: none;

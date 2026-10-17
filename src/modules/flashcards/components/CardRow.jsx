@@ -1,4 +1,5 @@
 import { stateLabel, dueLabel, sideText } from "../lib/format";
+import Icon from "../../../components/Icon";
 
 // One compact card preview in the category list: select box, front / back
 // text, tags, scheduling status, and the per-card actions.
@@ -60,27 +61,27 @@ export default function CardRow({ card, selected, onToggleSelect, onEdit, onMove
             onClick={() => onMove(card)}
             title="Move card"
             aria-label={`Move card ${card.id}`}
-            className="icon-circle text-sm hover:bg-ink/5"
+            className="icon-circle hover:bg-ink/5"
           >
-            ⇄
+            <Icon name="arrow-left-right" size={16} />
           </button>
           <button
             type="button"
             onClick={() => onEdit(card)}
             title="Edit card"
             aria-label={`Edit card ${card.id}`}
-            className="icon-circle text-sm hover:bg-emerald-50 hover:text-emerald-700"
+            className="icon-circle hover:bg-emerald-50 hover:text-emerald-700"
           >
-            ✏️
+            <Icon name="pencil" size={16} />
           </button>
           <button
             type="button"
             onClick={() => onDelete(card)}
             title="Delete card"
             aria-label={`Delete card ${card.id}`}
-            className="icon-circle text-sm hover:bg-red-50 hover:text-red-700"
+            className="icon-circle hover:bg-red-50 hover:text-red-700"
           >
-            🗑️
+            <Icon name="trash" size={16} />
           </button>
         </div>
       </div>

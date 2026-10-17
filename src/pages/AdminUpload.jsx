@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import LoadingSkeleton from "../components/LoadingSkeleton";
+import Icon from "../components/Icon";
 import AddSubjectModal from "../components/AddSubjectModal";
 import AddCategoryModal from "../components/AddCategoryModal";
 import Toast from "../components/Toast";
@@ -314,7 +315,8 @@ export default function AdminUpload() {
         to="/"
         className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink/50 transition-colors hover:text-ink"
       >
-        ← Back to Dashboard
+        <Icon name="arrow-left" size={16} />
+        Back to Dashboard
       </Link>
 
       <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -357,7 +359,7 @@ export default function AdminUpload() {
           <span className="font-semibold">
             {subjects.find((s) => s.id === subjectId)?.name ?? "…"}
           </span>{" "}
-          →{" "}
+          <Icon name="arrow-right" size={14} className="mx-0.5 inline-block align-middle" />{" "}
           <span className="font-semibold">
             {categories.find((c) => c.id === categoryId)?.name ?? "…"}
           </span>

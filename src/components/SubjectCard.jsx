@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import Icon from "./Icon";
 
 const iconFor = {
   physics: "⚡",
@@ -50,9 +51,9 @@ export default function SubjectCard({ subject, onEdit, onDelete }) {
                 onClick={() => onEdit(subject)}
                 title="Edit subject"
                 aria-label={`Edit ${subject.name}`}
-                className="icon-circle pointer-events-auto text-sm hover:bg-emerald-50 hover:text-emerald-700"
+                className="icon-circle pointer-events-auto hover:bg-emerald-50 hover:text-emerald-700"
               >
-                ✏️
+                <Icon name="pencil" size={16} />
               </button>
             )}
             {onDelete && (
@@ -61,9 +62,9 @@ export default function SubjectCard({ subject, onEdit, onDelete }) {
                 onClick={() => onDelete(subject)}
                 title="Delete subject"
                 aria-label={`Delete ${subject.name}`}
-                className="icon-circle pointer-events-auto text-sm hover:bg-red-50 hover:text-red-700"
+                className="icon-circle pointer-events-auto hover:bg-red-50 hover:text-red-700"
               >
-                🗑️
+                <Icon name="trash" size={16} />
               </button>
             )}
           </div>

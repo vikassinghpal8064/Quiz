@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import Icon from "../../../../components/Icon";
 
 // Daily-goal progress on the flash home: a small ring showing reviews answered
 // today against the goal, the streak beside it, and a shortcut to the full
@@ -61,24 +62,29 @@ export default function DailyGoalRing({ overview, loading = false }) {
       <div className="min-w-0 flex-1">
         <p className="label-caps">Today</p>
         <p className="mt-1 text-lg font-semibold text-ink">
-          {loading ? "Loading…" : done ? "Goal reached 🎉" : `${pct}% of your daily goal`}
+          {loading ? "Loading…" : done ? (
+            <span className="inline-flex items-center gap-1.5">
+              Goal reached <Icon name="sparkles" size={18} className="text-lavender-deep" />
+            </span>
+          ) : `${pct}% of your daily goal`}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink/55">
           <span className="inline-flex items-center gap-1.5">
-            <span aria-hidden="true">🔥</span>
+            <Icon name="flame" size={15} className="text-orange-500" />
             <strong className="font-semibold text-ink">{streak}</strong>
             day{streak === 1 ? "" : "s"} streak
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span aria-hidden="true">📅</span>
+            <Icon name="calendar" size={15} />
             <strong className="font-semibold text-ink">{dueToday}</strong> due today
           </span>
         </div>
         <Link
           to="/flash/stats"
-          className="mt-4 inline-flex text-sm font-semibold text-lavender-soft transition hover:text-lavender"
+          className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-lavender-soft transition hover:text-lavender"
         >
-          View full stats →
+          View full stats
+          <Icon name="arrow-right" size={15} />
         </Link>
       </div>
     </div>

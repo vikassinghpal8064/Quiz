@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Icon from "../../../../components/Icon";
 import {
   bulkCreateCards,
   createCategory,
@@ -171,9 +172,10 @@ export default function BackupPanel({ notify }) {
             <button
               type="button"
               onClick={exportJson}
-              className="rounded-xl border border-line px-3.5 py-2 text-sm font-semibold text-ink/80 transition hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line px-3.5 py-2 text-sm font-semibold text-ink/80 transition hover:text-ink"
             >
-              ⬇ Export JSON
+              <Icon name="download" size={16} />
+              Export JSON
             </button>
 
             <input
@@ -187,9 +189,10 @@ export default function BackupPanel({ notify }) {
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={restoring}
-              className="rounded-xl border border-line px-3.5 py-2 text-sm font-semibold text-ink/80 transition hover:text-ink disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line px-3.5 py-2 text-sm font-semibold text-ink/80 transition hover:text-ink disabled:opacity-40"
             >
-              {restoring ? "Restoring…" : "⬆ Import JSON"}
+              <Icon name="upload" size={16} />
+              {restoring ? "Restoring…" : "Import JSON"}
             </button>
           </div>
 

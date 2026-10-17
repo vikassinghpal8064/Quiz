@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Icon from "../../../components/Icon.jsx";
 import RichTextView from "./RichTextView";
 import InkViewer from "./InkViewer";
 
@@ -78,7 +79,7 @@ function ZoomableImage({ block }) {
               aria-label="Close image"
               className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
             >
-              ✕
+              <Icon name="x" size={18} />
             </button>
           </div>
 

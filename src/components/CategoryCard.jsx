@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import Icon from "./Icon";
 
 export default function CategoryCard({ category, onEdit, onDelete }) {
   return (
@@ -12,8 +13,8 @@ export default function CategoryCard({ category, onEdit, onDelete }) {
           to={`/category/${category.id}`}
           className="accent-card block h-full rounded-2xl border p-5 transition-all duration-200"
         >
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-100 text-xl">
-            📁
+          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-stone-100 text-ink/60">
+            <Icon name="folder" size={22} />
           </div>
           <h2 className="text-lg font-semibold text-ink">{category.name}</h2>
           {category.description && (
@@ -37,9 +38,9 @@ export default function CategoryCard({ category, onEdit, onDelete }) {
                 onClick={() => onEdit(category)}
                 title="Edit category"
                 aria-label={`Edit ${category.name}`}
-                className="icon-circle pointer-events-auto text-sm hover:bg-emerald-50 hover:text-emerald-700"
+                className="icon-circle pointer-events-auto hover:bg-emerald-50 hover:text-emerald-700"
               >
-                ✏️
+                <Icon name="pencil" size={16} />
               </button>
             )}
             {onDelete && (
@@ -48,9 +49,9 @@ export default function CategoryCard({ category, onEdit, onDelete }) {
                 onClick={() => onDelete(category)}
                 title="Delete category"
                 aria-label={`Delete ${category.name}`}
-                className="icon-circle pointer-events-auto text-sm hover:bg-red-50 hover:text-red-700"
+                className="icon-circle pointer-events-auto hover:bg-red-50 hover:text-red-700"
               >
-                🗑️
+                <Icon name="trash" size={16} />
               </button>
             )}
           </div>

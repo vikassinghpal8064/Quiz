@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/authContext";
+import Icon from "./Icon";
 
 // Logout lives in a right-hand drawer instead of a floating pill. A small
 // corner button (styled by #account-toggle in index.css) sits directly to the
@@ -129,9 +130,9 @@ export default function AccountSidebar() {
                 type="button"
                 onClick={close}
                 aria-label="Close account menu"
-                className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-sm font-semibold text-ink/70 transition hover:bg-ink/10"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-ink/60 transition hover:bg-ink/5 hover:text-ink"
               >
-                ✕
+                <Icon name="x" size={18} />
               </button>
             </div>
 
