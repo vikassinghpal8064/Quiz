@@ -56,11 +56,12 @@ export default function ShortcutCheatsheet() {
   return (
     <>
       <button
+        id="cheatsheet-trigger"
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Keyboard shortcuts"
         title="Keyboard shortcuts (?)"
-        className="fixed bottom-5 left-5 z-40 grid h-10 w-10 place-items-center rounded-full border border-line bg-elevated/95 text-base font-bold text-ink/70 shadow-card backdrop-blur transition hover:text-ink"
+        className="fixed bottom-20 right-5 z-40 grid h-8 w-8 place-items-center rounded-lg border border-line bg-elevated/95 text-sm font-semibold text-ink/60 backdrop-blur transition hover:bg-ink/5 hover:text-ink md:bottom-3 md:left-3 md:right-auto"
       >
         ?
       </button>
@@ -80,25 +81,25 @@ export default function ShortcutCheatsheet() {
               role="dialog"
               aria-modal="true"
               aria-label="Keyboard shortcuts"
-              className="card relative max-h-[85vh] w-full max-w-lg overflow-y-auto p-6"
+              className="card relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden p-0"
               variants={panel}
               initial="hidden"
               animate="visible"
               exit="exit"
             >
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-ink">Keyboard shortcuts</h2>
+              <div className="flex shrink-0 items-center justify-between border-b border-ink/10 px-6 py-4">
+                <h2 className="text-lg font-semibold text-ink">Keyboard shortcuts</h2>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
                   aria-label="Close"
-                  className="rounded-lg px-2 py-1 text-ink/50 transition hover:text-ink"
+                  className="grid h-8 w-8 place-items-center rounded-md text-ink/50 transition hover:bg-ink/5 hover:text-ink"
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
                 {GROUPS.map((group) => (
                   <section key={group.title}>
                     <h3 className="label-caps mb-2">{group.title}</h3>

@@ -88,7 +88,7 @@ export default function CardModal({ open, card = null, categoryId, onClose, onSa
           <div className="absolute inset-0 bg-ink/50 backdrop-blur-sm" onClick={onClose} />
 
           <motion.div
-            className="relative my-8 w-full max-w-lg rounded-2xl border border-ink/10 bg-white p-6 shadow-card-hover"
+            className="relative my-8 w-full max-w-2xl rounded-2xl border border-ink/10 bg-white p-6 shadow-card-hover"
             variants={panel}
             initial="hidden"
             animate="visible"

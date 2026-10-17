@@ -91,6 +91,7 @@
 
   /* Elevation: cards are flat; one soft shadow for modals/menus/FAB. */
   --shadow-card: none;
+  --shadow-card-hover: 0 18px 44px -20px rgba(15, 15, 25, 0.38);
   --shadow-menu: 0 10px 30px -12px rgba(15, 15, 25, 0.28);
   --shadow-modal: 0 24px 60px -24px rgba(15, 15, 25, 0.45);
 }
@@ -132,6 +133,7 @@ html.dark {
   --color-accent-ink: #cbc3f7;
   --shadow-menu: 0 12px 32px -12px rgba(0, 0, 0, 0.8);
   --shadow-modal: 0 28px 64px -24px rgba(0, 0, 0, 0.85);
+  --shadow-card-hover: 0 20px 48px -20px rgba(0, 0, 0, 0.8);
 }
 
 body {
@@ -629,6 +631,15 @@ button:not(:disabled):active {
     background-color 0.18s ease;
 }
 
+/* Modal / dialog panels: compact 12px radius and the one soft modal shadow,
+   applied in one place so every dialog reads the same without editing each
+   file. Matches the shared panel class combo used across the app. */
+.rounded-2xl.border.bg-white.shadow-card-hover {
+  border-radius: var(--radius-xl);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-modal);
+}
+
 .card-lift:hover {
   transform: translateY(-1px);
   border-color: var(--color-line-strong);
@@ -1017,11 +1028,13 @@ button:not(:disabled):active {
 
 /* ============================================================
    Floating corner buttons (theme toggle + account chip)
+   They overlay the right end of the sticky top bar (h-12), so
+   their top/right offsets align them inside it.
    ============================================================ */
 #theme-toggle,
 #account-toggle {
   position: fixed;
-  top: 1rem;
+  top: 0.25rem;
   z-index: 100;
   display: inline-flex;
   align-items: center;
@@ -1077,6 +1090,15 @@ html.dark #theme-toggle .icon-moon {
   display: none;
 }
 
+/* Sidebar footer help trigger. Expanded (220px) it shares the footer row with
+   the collapse control; collapsed (60px) there is only room for one control,
+   so the help trigger stacks just above it instead of overlapping. */
+@media (min-width: 768px) {
+  .shell-collapsed #cheatsheet-trigger {
+    bottom: 3.25rem;
+  }
+}
+
 /* ============================================================
    Responsive: Mobile (<= 639px)
    ============================================================ */
@@ -1121,15 +1143,15 @@ html.dark #theme-toggle .icon-moon {
   }
 
   #theme-toggle {
-    top: 0.75rem;
+    top: 0.25rem;
     right: 0.75rem;
     width: 2.5rem;
     height: 2.5rem;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
   }
 
   #account-toggle {
-    top: 0.75rem;
+    top: 0.25rem;
     right: 3.75rem;
     width: 2.5rem;
     height: 2.5rem;
@@ -1167,12 +1189,12 @@ html.dark #theme-toggle .icon-moon {
   }
 
   #theme-toggle {
-    top: 1.25rem;
+    top: 0.25rem;
     right: 1.25rem;
   }
 
   #account-toggle {
-    top: 1.25rem;
+    top: 0.25rem;
     right: 4.5rem;
   }
 }

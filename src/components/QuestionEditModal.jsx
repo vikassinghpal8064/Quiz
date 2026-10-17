@@ -95,15 +95,26 @@ export default function QuestionEditModal({ question, onClose, onSaved }) {
         <div className="absolute inset-0 bg-ink/50 backdrop-blur-sm" onClick={onClose} />
 
         <motion.div
-          className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-ink/10 bg-white p-6 shadow-card-hover"
+          className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white p-0 shadow-card-hover"
           variants={panel}
           initial="hidden"
           animate="visible"
           exit="exit"
         >
-          <h2 className="text-xl font-semibold text-ink">Edit Question</h2>
+          <div className="flex shrink-0 items-center justify-between border-b border-ink/10 px-6 py-4">
+            <h2 className="text-lg font-semibold text-ink">Edit Question</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="grid h-8 w-8 place-items-center rounded-md text-ink/50 transition hover:bg-ink/5 hover:text-ink"
+            >
+              ✕
+            </button>
+          </div>
 
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
             <div>
               <label htmlFor="edit-q-text" className={labelClass}>
                 Question *
@@ -174,7 +185,9 @@ export default function QuestionEditModal({ question, onClose, onSaved }) {
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 
-            <div className="flex justify-end gap-3 pt-2">
+            </div>
+
+            <div className="flex shrink-0 justify-end gap-3 border-t border-ink/10 px-6 py-4">
               <button
                 type="button"
                 onClick={onClose}

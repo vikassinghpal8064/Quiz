@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { modules, moduleForPath } from "../modules/registry";
 import { useAuth } from "../lib/authContext";
 
@@ -36,12 +36,12 @@ function BrandMark({ size = "h-9 w-9 text-xs" }) {
 }
 
 // The shell that wraps every route: a collapsible left sidebar on desktop, a
-// bottom tab bar plus a top mode switch on mobile. It is a layout route, so
-// pages render through <Outlet /> and keep their own markup untouched.
+// bottom tab bar on mobile, and one slim sticky top bar (breadcrumb on the
+// left, theme/account controls on the right). It is a layout route, so pages
+// render through <Outlet /> and keep their own markup untouched.
 export default function AppShell() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
 
   const [collapsed, setCollapsed] = useState(() => readStored(COLLAPSE_KEY) === "1");
 
@@ -66,27 +66,20 @@ export default function AppShell() {
   // the same Outlet, so their markup and behaviour are unchanged.
   if (!isAuthenticated) return <Outlet />;
 
-  function switchMode(id) {
-    const target = modules.find((m) => m.id === id);
-    if (!target) return;
-    writeStored(MODE_KEY, id);
-    navigate(target.basePath);
-  }
-
   return (
-    <div className="min-h-screen">
+    <div className={`min-h-screen ${collapsed ? "shell-collapsed" : ""}`}>
       {/* ---------------- Desktop sidebar ---------------- */}
       <aside
         className={`fixed left-0 top-0 z-40 hidden h-screen flex-col border-r border-ink/10 bg-surface transition-[width] duration-200 md:flex ${
-          collapsed ? "w-20" : "w-60"
+          collapsed ? "w-[60px]" : "w-[220px]"
         }`}
       >
         <div
-          className={`flex items-center gap-2.5 border-b border-ink/10 py-4 ${
-            collapsed ? "justify-center px-2" : "px-4"
+          className={`flex h-12 shrink-0 items-center gap-2 border-b border-ink/10 ${
+            collapsed ? "justify-center px-2" : "px-3"
           }`}
         >
-          <BrandMark />
+          <BrandMark size="h-7 w-7 text-[10px]" />
           {!collapsed && (
             <span className="truncate font-display text-sm font-semibold tracking-tight text-ink">
               Study Deck
@@ -94,115 +87,100 @@ export default function AppShell() {
           )}
         </div>
 
-        {/* Mode switch, pinned to the top of the shell. */}
-        <div className={`mt-4 ${collapsed ? "px-2" : "px-3"}`}>
-          {collapsed ? (
-            <div className="flex flex-col gap-1">
-              {modules.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => switchMode(m.id)}
-                  title={`Switch to ${m.label}`}
-                  aria-label={`Switch to ${m.label}`}
-                  aria-pressed={activeId === m.id}
-                  className={`grid place-items-center rounded-lg py-2 text-base transition-colors ${
-                    activeId === m.id
-                      ? "bg-lavender text-on-accent"
-                      : "text-ink/55 hover:bg-ink/5 hover:text-ink"
-                  }`}
-                >
-                  <span aria-hidden="true">{m.icon}</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-1 rounded-xl bg-sunken p-1">
-              {modules.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => switchMode(m.id)}
-                  aria-pressed={activeId === m.id}
-                  className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors ${
-                    activeId === m.id
-                      ? "bg-lavender text-on-accent"
-                      : "text-ink/55 hover:text-ink"
-                  }`}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* One nav item per registry entry, active one highlighted. */}
-        <nav className={`mt-4 flex flex-1 flex-col gap-1 ${collapsed ? "px-2" : "px-3"}`}>
+        {/* ONE nav list: each module, with the active module's own links
+            nested underneath. No separate mode-switch row. */}
+        <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
           {modules.map((m) => {
             const active = activeId === m.id;
             return (
-              <Link
-                key={m.id}
-                to={m.basePath}
-                title={m.label}
-                aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
-                  collapsed ? "justify-center" : ""
-                } ${
-                  active
-                    ? "bg-lavender/15 text-ink"
-                    : "text-ink/55 hover:bg-ink/5 hover:text-ink"
-                }`}
-              >
-                <span
-                  className={`text-base ${active ? "text-lavender-soft" : ""}`}
-                  aria-hidden="true"
+              <div key={m.id} className="flex flex-col gap-0.5">
+                <Link
+                  to={m.basePath}
+                  title={m.label}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                    collapsed ? "justify-center" : ""
+                  } ${
+                    active
+                      ? "bg-lavender font-semibold text-on-accent"
+                      : "font-medium text-ink/70 hover:bg-ink/5 hover:text-ink"
+                  }`}
                 >
-                  {m.icon}
-                </span>
-                {!collapsed && <span className="truncate">{m.label}</span>}
-              </Link>
+                  <span className="grid h-5 w-5 shrink-0 place-items-center" aria-hidden="true">
+                    {m.icon}
+                  </span>
+                  {!collapsed && <span className="truncate">{m.label}</span>}
+                </Link>
+
+                {!collapsed && active && m.links?.length > 0 && (
+                  <div className="mb-1 ml-[1.15rem] flex flex-col gap-0.5 border-l border-ink/10 pl-2">
+                    {m.links.map((l) => (
+                      <Link
+                        key={l.to}
+                        to={l.to}
+                        className="truncate rounded-md px-2 py-1.5 text-xs font-medium text-ink/55 transition-colors hover:bg-ink/5 hover:text-ink"
+                      >
+                        {l.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
 
-        <button
-          type="button"
-          onClick={() => setCollapsed((v) => !v)}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className={`m-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-ink/50 transition-colors hover:bg-ink/5 hover:text-ink ${
-            collapsed ? "justify-center" : ""
+        {/* Footer row: the collapse control lives here. The help "?" trigger
+            (rendered by ShortcutCheatsheet) sits in the same row on desktop. */}
+        <div
+          className={`flex shrink-0 items-center border-t border-ink/10 py-2 ${
+            collapsed ? "justify-center px-2" : "justify-end px-3"
           }`}
         >
-          <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
-          {!collapsed && <span>Collapse</span>}
-        </button>
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => !v)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="grid h-7 w-7 place-items-center rounded-md text-xs font-semibold text-ink/45 transition-colors hover:bg-ink/5 hover:text-ink"
+          >
+            <span aria-hidden="true">{collapsed ? "»" : "«"}</span>
+          </button>
+        </div>
       </aside>
 
       {/* ---------------- Content ---------------- */}
-      <div className={`${collapsed ? "md:pl-20" : "md:pl-60"} pb-24 transition-[padding] duration-200 md:pb-0`}>
-        {/* Mobile mode switch, at the top. Right padding keeps it clear of the
-            app's fixed theme/account buttons in the top-right corner. */}
-        <div className="sticky top-0 z-30 flex items-center border-b border-ink/10 bg-cream/95 px-3 py-2.5 pr-[7rem] backdrop-blur md:hidden">
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-sunken p-1">
-            {modules.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => switchMode(m.id)}
-                aria-pressed={activeId === m.id}
-                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
-                  activeId === m.id
-                    ? "bg-lavender text-on-accent"
-                    : "text-ink/55 hover:text-ink"
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div
+        className={`${
+          collapsed ? "md:pl-[60px]" : "md:pl-[220px]"
+        } pb-24 transition-[padding] duration-200 md:pb-0`}
+      >
+        {/* Sticky top bar, all widths. Content scrolls underneath it, so it
+            never covers a page. Right padding keeps the breadcrumb clear of the
+            fixed theme/account buttons (which overlay the bar's right end). */}
+        <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-ink/10 bg-cream/90 px-3 pr-[7.5rem] backdrop-blur md:pr-32">
+          <nav className="flex min-w-0 items-center gap-1.5 text-sm" aria-label="Breadcrumb">
+            <Link
+              to="/"
+              className="shrink-0 font-display font-semibold tracking-tight text-ink"
+            >
+              Study Deck
+            </Link>
+            {activeModule && activeModule.basePath !== "/" && (
+              <>
+                <span className="text-ink/30" aria-hidden="true">
+                  /
+                </span>
+                <Link
+                  to={activeModule.basePath}
+                  className="truncate font-medium text-ink/55 transition-colors hover:text-ink"
+                >
+                  {activeModule.label}
+                </Link>
+              </>
+            )}
+          </nav>
+        </header>
 
         <main>
           <Outlet />
@@ -218,11 +196,11 @@ export default function AppShell() {
               key={m.id}
               to={m.basePath}
               aria-current={active ? "page" : undefined}
-              className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors ${
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors ${
                 active ? "text-lavender-soft" : "text-ink/50"
               }`}
             >
-              <span className="text-lg leading-none" aria-hidden="true">
+              <span className="text-base leading-none" aria-hidden="true">
                 {m.icon}
               </span>
               <span>{m.label}</span>

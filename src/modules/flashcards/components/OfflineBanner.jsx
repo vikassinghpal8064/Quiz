@@ -27,7 +27,7 @@ export default function OfflineBanner() {
   return (
     <div
       role="status"
-      className="sticky top-2 z-40 mx-auto mb-2 flex w-fit items-center gap-2 rounded-full border border-line bg-elevated/95 px-3.5 py-1.5 text-xs font-semibold text-ink/80 backdrop-blur"
+      className="sticky top-14 z-40 mx-auto mb-2 flex w-fit items-center gap-2 rounded-full border border-line bg-elevated/95 px-3.5 py-1.5 text-xs font-semibold text-ink/80 backdrop-blur"
     >
       <span className={online ? "text-sage" : "text-butter"}>{online ? "↻" : "⚡"}</span>
       {online

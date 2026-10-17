@@ -76,7 +76,7 @@ export default function AddSubjectModal({ open, onClose, onCreated }) {
           />
 
           <motion.div
-            className="relative w-full max-w-md rounded-2xl border border-ink/10 bg-white p-6 shadow-card-hover"
+            className="relative w-full max-w-2xl rounded-2xl border border-ink/10 bg-white p-6 shadow-card-hover"
             variants={panel}
             initial="hidden"
             animate="visible"

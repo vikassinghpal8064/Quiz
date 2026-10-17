@@ -135,7 +135,7 @@ export default function CardEditorModal({
             aria-modal="true"
             aria-label={editing ? "Edit card" : "Add card"}
             onKeyDown={handleKeyDown}
-            className="relative flex h-full w-full max-w-6xl flex-col overflow-hidden border border-ink/10 bg-white shadow-card-hover sm:h-[calc(100vh-3rem)] sm:rounded-2xl"
+            className="relative flex h-full w-full max-w-4xl flex-col overflow-hidden border border-ink/10 bg-white shadow-card-hover sm:h-[calc(100vh-3rem)] sm:rounded-2xl"
             variants={panel}
             initial="hidden"
             animate="visible"

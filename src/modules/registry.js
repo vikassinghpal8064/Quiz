@@ -41,6 +41,14 @@ export const modules = [
     label: "Flash Cards",
     icon: "▤",
     basePath: "/flash",
+    // The module's own links, shown under its nav item when it is active.
+    // Purely presentational navigation; every route already exists.
+    links: [
+      { label: "Home", to: "/flash" },
+      { label: "Import", to: "/flash/import" },
+      { label: "Stats", to: "/flash/stats" },
+      { label: "Settings", to: "/flash/settings" },
+    ],
     routes: [
       "/flash",
       "/flash/folder/:folderId",
