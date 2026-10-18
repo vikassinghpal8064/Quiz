@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import EmptyState from "../../../components/EmptyState";
+import Icon from "../../../components/Icon";
 import ConfirmDeleteModal from "../../../components/ConfirmDeleteModal";
 import Toast from "../../../components/Toast";
 import useToast from "../hooks/useToast";
@@ -322,7 +323,8 @@ export default function CategoryPage() {
             onClick={() => setAddOpen(true)}
             className="hidden rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 md:inline-flex"
           >
-            + Add Card
+            <Icon name="plus" size={16} />
+            Add Card
           </button>
           <button
             type="button"
@@ -463,9 +465,10 @@ export default function CategoryPage() {
             <button
               type="button"
               onClick={() => setAddOpen(true)}
-              className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
             >
-              + Add Card
+              <Icon name="plus" size={16} />
+              Add Card
             </button>
           </EmptyState>
         )
@@ -525,7 +528,8 @@ export default function CategoryPage() {
         onClick={() => setAddOpen(true)}
         className="fixed bottom-20 right-5 z-40 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-menu transition hover:bg-emerald-700 md:hidden"
       >
-        + Add Card
+        <Icon name="plus" size={16} />
+        Add Card
       </button>
 
       {(addOpen || editCard) && (
