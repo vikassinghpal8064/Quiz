@@ -24,18 +24,18 @@ export default function SubjectCard({ subject, onEdit, onDelete }) {
       <div className="group relative h-full">
         <Link
           to={`/subject/${subject.id}`}
-          className="accent-card block h-full rounded-2xl border p-6 transition-all duration-200"
+          className="accent-card block h-full rounded-xl border p-4 transition-all duration-200"
         >
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-2xl">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-xl">
             {getIcon(subject.icon_name)}
           </div>
-          <h2 className="text-lg font-semibold text-ink">{subject.name}</h2>
+          <h2 className="text-base font-semibold text-ink line-clamp-2">{subject.name}</h2>
           {subject.description && (
-            <p className="mt-1 line-clamp-2 text-sm text-ink/55">
+            <p className="mt-0.5 line-clamp-2 text-xs text-ink/55">
               {subject.description}
             </p>
           )}
-          <p className="card-chip mt-4">
+          <p className="card-chip mt-3 text-xs">
             {subject.category_count ?? 0}{" "}
             {(subject.category_count ?? 0) === 1 ? "category" : "categories"}
           </p>

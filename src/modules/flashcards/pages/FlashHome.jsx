@@ -117,22 +117,22 @@ export default function FlashHome() {
             >
               <div className="group relative h-full">
                 <div
-                  className={`accent-card flex h-full flex-col rounded-2xl border p-6 transition-all duration-200 ${accentClass(
+                  className={`accent-card flex h-full flex-col rounded-xl border p-4 transition-all duration-200 ${accentClass(
                     folder.color,
                     i
                   )}`}
                 >
                   <Link to={`/flash/folder/${folder.id}`} className="flex flex-1 flex-col">
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-2xl">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-xl">
                       {folderIcon(folder.icon)}
                     </div>
-                    <h2 className="text-lg font-semibold">{folder.name}</h2>
+                    <h2 className="text-base font-semibold line-clamp-2">{folder.name}</h2>
                     {folder.description && (
-                      <p className="mt-1 line-clamp-2 text-sm text-ink/55">
+                      <p className="mt-0.5 line-clamp-2 text-xs text-ink/55">
                         {folder.description}
                       </p>
                     )}
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
                       <span className="card-chip">
                         {folder.card_count ?? 0}{" "}
                         {(folder.card_count ?? 0) === 1 ? "card" : "cards"}

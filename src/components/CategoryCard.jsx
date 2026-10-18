@@ -11,18 +11,18 @@ export default function CategoryCard({ category, onEdit, onDelete }) {
       <div className="group relative h-full">
         <Link
           to={`/category/${category.id}`}
-          className="accent-card block h-full rounded-2xl border p-5 transition-all duration-200"
+          className="accent-card block h-full rounded-xl border p-4 transition-all duration-200"
         >
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-stone-100 text-ink/60">
-            <Icon name="folder" size={22} />
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 text-ink/60">
+            <Icon name="folder" size={20} />
           </div>
-          <h2 className="text-lg font-semibold text-ink">{category.name}</h2>
+          <h2 className="text-base font-semibold text-ink line-clamp-2">{category.name}</h2>
           {category.description && (
-            <p className="mt-1 line-clamp-2 text-sm text-ink/55">
+            <p className="mt-0.5 line-clamp-2 text-xs text-ink/55">
               {category.description}
             </p>
           )}
-          <p className="stat-num mt-4 text-3xl">
+          <p className="mt-3 text-sm font-semibold text-ink">
             {category.question_count ?? 0}{" "}
             {(category.question_count ?? 0) === 1 ? "question" : "questions"}
           </p>
