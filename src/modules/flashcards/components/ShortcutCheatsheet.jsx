@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Icon from "../../../components/Icon.jsx";
+import Icon from "../../../components/Icon";
 import { AnimatePresence, motion } from "framer-motion";
 import { overlay, panel } from "./modalMotion";
 

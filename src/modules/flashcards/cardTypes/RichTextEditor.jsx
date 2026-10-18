@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { buildExtensions } from "./extensions";
+import Icon from "../../../components/Icon";
 
 // Content area styling. Tiptap tags the editable element with both "tiptap" and
 // "ProseMirror"; these arbitrary variants style that subtree without adding new
@@ -118,7 +119,7 @@ export default function RichTextEditor({
           disabled={disabled}
           onClick={() => editor.chain().focus().toggleHighlight().run()}
         >
-          🖍
+          <Icon name="highlighter" size={15} />
         </ToolButton>
         <span className="mx-0.5 h-4 w-px bg-ink/10" aria-hidden="true" />
         <ToolButton
@@ -127,7 +128,7 @@ export default function RichTextEditor({
           disabled={disabled}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
         >
-          ••
+          <Icon name="list" size={15} />
         </ToolButton>
         <ToolButton
           title="Numbered list"
@@ -162,14 +163,14 @@ export default function RichTextEditor({
             disabled={disabled || !editor.can().undo()}
             onClick={() => editor.chain().focus().undo().run()}
           >
-            ↺
+            <Icon name="undo" size={15} />
           </ToolButton>
           <ToolButton
             title="Redo"
             disabled={disabled || !editor.can().redo()}
             onClick={() => editor.chain().focus().redo().run()}
           >
-            ↻
+            <Icon name="redo" size={15} />
           </ToolButton>
         </div>
       </div>

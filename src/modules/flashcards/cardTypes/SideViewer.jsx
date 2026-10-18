@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import Icon from "../../../components/Icon.jsx";
+import Icon from "../../../components/Icon";
 import RichTextView from "./RichTextView";
 import InkViewer from "./InkViewer";
 
@@ -53,9 +53,9 @@ function ZoomableImage({ block }) {
               type="button"
               onClick={() => setScale((s) => Math.max(0.5, Number((s - 0.25).toFixed(2))))}
               aria-label="Zoom out"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg text-white transition hover:bg-white/20"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
             >
-              −
+              <Icon name="minus" size={18} />
             </button>
             <button
               type="button"
@@ -69,9 +69,9 @@ function ZoomableImage({ block }) {
               type="button"
               onClick={() => setScale((s) => Math.min(4, Number((s + 0.25).toFixed(2))))}
               aria-label="Zoom in"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg text-white transition hover:bg-white/20"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
             >
-              +
+              <Icon name="plus" size={18} />
             </button>
             <button
               type="button"

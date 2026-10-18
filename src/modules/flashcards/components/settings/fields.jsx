@@ -2,6 +2,8 @@
 // controlled (value + onChange) and styled from the app's CSS variables so the
 // page stays consistent with the rest of the design system. No state lives here.
 
+import Icon from "../../../../components/Icon";
+
 // One labelled row: title + hint on the left, the control on the right (stacked
 // on narrow screens or when `stacked` is set).
 export function SettingRow({ title, hint, control, stacked = false }) {
@@ -61,7 +63,7 @@ export function NumberField({ value, min, max, step = 1, suffix, onChange, id, a
         disabled={Number(value) <= min}
         className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-elevated text-lg font-semibold text-ink/80 transition hover:text-ink disabled:opacity-30"
       >
-        −
+        <Icon name="minus" size={18} />
       </button>
       <div className="relative flex-1">
         <input
@@ -90,7 +92,7 @@ export function NumberField({ value, min, max, step = 1, suffix, onChange, id, a
         disabled={Number(value) >= max}
         className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-elevated text-lg font-semibold text-ink/80 transition hover:text-ink disabled:opacity-30"
       >
-        +
+        <Icon name="plus" size={18} />
       </button>
     </div>
   );

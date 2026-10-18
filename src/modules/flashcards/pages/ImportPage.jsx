@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Toast from "../../../components/Toast";
+import Icon from "../../../components/Icon";
 import useToast from "../hooks/useToast";
 import {
   bulkCreateCards,
@@ -687,8 +688,9 @@ export default function ImportPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <Link to="/flash" className="text-sm font-medium text-ink/50 transition hover:text-ink">
-          ‹ Flash Cards
+        <Link to="/flash" className="inline-flex items-center gap-1 text-sm font-medium text-ink/50 transition hover:text-ink">
+          <Icon name="chevron-left" size={16} />
+          Flash Cards
         </Link>
         <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink">
           Import Cards

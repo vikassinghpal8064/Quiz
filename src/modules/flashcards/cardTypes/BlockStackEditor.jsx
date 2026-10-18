@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Icon from "../../../components/Icon.jsx";
+import Icon from "../../../components/Icon";
 import RichTextEditor from "./RichTextEditor";
 import ImageBlockEditor from "./ImageBlockEditor";
 import AudioBlockEditor from "./AudioBlockEditor";
@@ -8,10 +8,10 @@ import { audioBlock, imageBlock, inkBlock, textBlock } from "./blocks";
 
 // The blocks the "Add block" menu can create.
 const ADD_OPTIONS = [
-  { type: "text", label: "Text", icon: "📝" },
-  { type: "image", label: "Image", icon: "🖼️" },
-  { type: "audio", label: "Audio", icon: "🔊" },
-  { type: "ink", label: "Handwriting", icon: "✍️" },
+  { type: "text", label: "Text", icon: "file-text" },
+  { type: "image", label: "Image", icon: "image" },
+  { type: "audio", label: "Audio", icon: "volume-2" },
+  { type: "ink", label: "Handwriting", icon: "pen-tool" },
 ];
 
 function AddBlockMenu({ open, onToggle, onClose, onAdd }) {
@@ -20,9 +20,10 @@ function AddBlockMenu({ open, onToggle, onClose, onAdd }) {
       <button
         type="button"
         onClick={onToggle}
-        className="rounded-lg border border-dashed border-ink/25 bg-white px-3 py-1.5 text-xs font-semibold text-ink/60 transition hover:bg-stone-100"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-ink/25 bg-white px-3 py-1.5 text-xs font-semibold text-ink/60 transition hover:bg-stone-100"
       >
-        + Add block
+        <Icon name="plus" size={14} />
+        Add block
       </button>
 
       {open && (
@@ -36,7 +37,8 @@ function AddBlockMenu({ open, onToggle, onClose, onAdd }) {
                 onClick={() => onAdd(option.type)}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink hover:bg-stone-100"
               >
-                {option.icon} {option.label}
+                <Icon name={option.icon} size={16} className="text-ink/60" />
+                {option.label}
               </button>
             ))}
           </div>

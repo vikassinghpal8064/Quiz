@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Icon from "../../../components/Icon";
 import { compressImage } from "../lib/image";
 import { loadImageQuality } from "../lib/imageQuality";
 import { removeMediaPaths, uploadMediaBlob } from "../lib/media";
@@ -104,7 +105,10 @@ export default function ImageBlockEditor({ block, onChange, onRemove, disabled =
       className="rounded-xl border border-ink/10 bg-white p-3 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-ink/40">🖼️ Image</span>
+        <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-ink/40">
+          <Icon name="image" size={13} />
+          Image
+        </span>
         {onRemove && (
           <button
             type="button"
@@ -141,9 +145,10 @@ export default function ImageBlockEditor({ block, onChange, onRemove, disabled =
               type="button"
               onClick={() => cameraRef.current?.click()}
               disabled={locked}
-              className="rounded-lg border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink/75 transition hover:bg-stone-100 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink/75 transition hover:bg-stone-100 disabled:opacity-50"
             >
-              📷 Camera
+              <Icon name="camera" size={14} />
+              Camera
             </button>
           </div>
         </div>

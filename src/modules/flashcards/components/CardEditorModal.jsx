@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Icon from "../../../components/Icon.jsx";
+import Icon from "../../../components/Icon";
 import { AnimatePresence, motion } from "framer-motion";
 import { createCard, updateCard } from "../lib/api";
 import { SELECTABLE_CARD_TYPES, getCardType } from "../cardTypes/registry";

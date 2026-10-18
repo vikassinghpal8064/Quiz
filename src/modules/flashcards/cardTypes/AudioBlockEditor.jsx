@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Icon from "../../../components/Icon";
 import { removeMediaPaths, uploadMediaBlob } from "../lib/media";
 import { peaksFromBlob } from "../lib/waveform";
 
@@ -338,7 +339,10 @@ export default function AudioBlockEditor({ block, onChange, onRemove, disabled =
       className="rounded-xl border border-ink/10 bg-white p-3"
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-ink/40">🔊 Audio</span>
+        <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-ink/40">
+          <Icon name="volume-2" size={13} />
+          Audio
+        </span>
         {onRemove && (
           <button
             type="button"
@@ -391,16 +395,18 @@ export default function AudioBlockEditor({ block, onChange, onRemove, disabled =
             <button
               type="button"
               onClick={replay}
-              className="rounded-lg border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink/75 transition hover:bg-stone-100"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink/75 transition hover:bg-stone-100"
             >
-              ▶ Replay
+              <Icon name="play" size={13} />
+              Replay
             </button>
             <button
               type="button"
               onClick={reRecord}
-              className="rounded-lg border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink/75 transition hover:bg-stone-100"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink/75 transition hover:bg-stone-100"
             >
-              ⟲ Re-record
+              <Icon name="rotate-ccw" size={13} />
+              Re-record
             </button>
             <button
               type="button"
@@ -423,9 +429,10 @@ export default function AudioBlockEditor({ block, onChange, onRemove, disabled =
             <button
               type="button"
               onClick={stopRecording}
-              className="ml-auto rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
             >
-              ■ Stop
+              <Icon name="square" size={11} filled />
+              Stop
             </button>
           </div>
         </div>
@@ -436,9 +443,10 @@ export default function AudioBlockEditor({ block, onChange, onRemove, disabled =
               type="button"
               onClick={startRecording}
               disabled={locked}
-              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
             >
-              ● Record
+              <Icon name="circle" size={12} filled />
+              Record
             </button>
           ) : (
             <p className="text-xs text-ink/45">

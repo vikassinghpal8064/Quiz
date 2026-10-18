@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Icon from "../../../components/Icon";
 import {
   DEFAULT_INK_COLOR,
   DEFAULT_INK_HEIGHT,
@@ -75,6 +76,22 @@ const TOOL_ORDER = [
   "rect",
   "ellipse",
 ];
+
+// Maps each ink tool id to a name in the shared inline-SVG icon set
+// (src/components/Icon.jsx). Kept here, beside TOOL_ORDER, instead of in
+// lib/ink.js so the drawing library stays free of presentation concerns.
+const TOOL_ICON = {
+  pen: "pen-tool",
+  fine: "pencil",
+  marker: "marker",
+  highlighter: "highlighter",
+  eraser: "eraser",
+  strokeEraser: "eraser",
+  lasso: "lasso",
+  line: "line",
+  rect: "square",
+  ellipse: "circle",
+};
 
 function pressureOf(event) {
   const p = Number(event.pressure);
@@ -812,8 +829,9 @@ export default function InkBlockEditor({ block, onChange, onRemove, disabled = f
       className="rounded-xl border border-ink/10 bg-white p-3 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-ink/40">
-          ✍️ Handwriting
+        <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-ink/40">
+          <Icon name="pen-tool" size={13} />
+          Handwriting
         </span>
         {onRemove && (
           <button
@@ -841,7 +859,7 @@ export default function InkBlockEditor({ block, onChange, onRemove, disabled = f
               tool === b.id ? "border-emerald-500 bg-emerald-50" : "border-ink/10 bg-white hover:bg-stone-100"
             }`}
           >
-            {b.icon}
+            <Icon name={TOOL_ICON[b.id]} size={16} />
           </button>
         ))}
 
@@ -854,7 +872,7 @@ export default function InkBlockEditor({ block, onChange, onRemove, disabled = f
           title="Undo (Ctrl+Z)"
           className="rounded-lg border border-ink/10 px-2 py-1 text-sm transition hover:bg-stone-100 disabled:opacity-40"
         >
-          ↶
+          <Icon name="undo" size={16} />
         </button>
         <button
           type="button"
@@ -863,7 +881,7 @@ export default function InkBlockEditor({ block, onChange, onRemove, disabled = f
           title="Redo (Ctrl+Shift+Z)"
           className="rounded-lg border border-ink/10 px-2 py-1 text-sm transition hover:bg-stone-100 disabled:opacity-40"
         >
-          ↷
+          <Icon name="redo" size={16} />
         </button>
         <button
           type="button"
@@ -872,7 +890,7 @@ export default function InkBlockEditor({ block, onChange, onRemove, disabled = f
           title="Clear"
           className="rounded-lg border border-ink/10 px-2 py-1 text-sm transition hover:bg-stone-100 disabled:opacity-40"
         >
-          🗑️
+          <Icon name="trash" size={16} />
         </button>
         <button
           type="button"
@@ -881,7 +899,7 @@ export default function InkBlockEditor({ block, onChange, onRemove, disabled = f
           title="Fit to content"
           className="rounded-lg border border-ink/10 px-2 py-1 text-sm transition hover:bg-stone-100 disabled:opacity-40"
         >
-          ⤢
+          <Icon name="arrow-left-right" size={16} />
         </button>
         {hasSelection && (
           <button
