@@ -10,28 +10,28 @@ export default function CardRow({ card, selected, onToggleSelect, onEdit, onMove
 
   return (
     <div
-      className={`virtual-row rounded-2xl border bg-white p-4 shadow-card transition-colors ${
+      className={`virtual-row rounded-xl border bg-white p-3 shadow-card transition-colors ${
         selected ? "border-emerald-500" : "border-ink/10"
       }`}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2.5">
         <input
           type="checkbox"
           checked={selected}
           onChange={() => onToggleSelect(card.id)}
           aria-label={`Select card ${card.id}`}
-          className="mt-1 h-4 w-4 shrink-0 rounded border-ink/25 accent-emerald-600"
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-ink/25 accent-emerald-600"
         />
 
         <div className="min-w-0 flex-1">
-          <p className="font-medium leading-relaxed text-ink">
+          <p className="text-sm font-medium leading-snug text-ink line-clamp-2">
             {front || <span className="text-ink/40">Untitled card</span>}
           </p>
           {back && (
-            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-ink/55">{back}</p>
+            <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-ink/55">{back}</p>
           )}
 
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                 card.suspended
